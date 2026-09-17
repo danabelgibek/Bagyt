@@ -1,0 +1,2923 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bagyt — персональный маршрут поступления</title>
+<meta name="description" content="Сервис превращает профиль абитуриента Казахстана в маршрут: куда поступать, почему подходит и что делать следующим шагом.">
+<meta name="theme-color" content="#ffffff">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* Bagyt — дизайн-система.
+   Одна метафора: маршрут как линия со станциями. Она же — навигация,
+   она же — план поступления. Всё остальное намеренно тихое.
+   Единственное яркое место — сегментированная шкала соответствия,
+   где ширина сегмента равна его весу в модели. */
+
+:root {
+  color-scheme: light only;
+
+  --ink: #14202e;
+  --ink-2: #47576b;
+  --ink-3: #7d8b9c;
+  --paper: #ffffff;
+  --surface: #eef1f5;
+  --surface-2: #f7f9fb;
+  --line: #d6dde5;
+  --line-soft: #e7ecf1;
+
+  --route: #1b4fd8;
+  --route-soft: #e8edfc;
+  --grant: #a8680d;
+  --grant-soft: #fdf2e0;
+  --good: #0e7b5f;
+  --good-soft: #e3f4ef;
+  --risk: #b3341f;
+  --risk-soft: #fdeceA;
+
+  --r-sm: 6px;
+  --r: 10px;
+  --r-lg: 16px;
+
+  --step: clamp(14px, 3.4vw, 16px);
+  --gap: 14px;
+  --pad: clamp(16px, 4.5vw, 24px);
+
+  --shell: 560px;
+  --font: 'Onest', ui-sans-serif, system-ui, 'Segoe UI', Roboto, sans-serif;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--surface);
+  color: var(--ink);
+  font-family: var(--font);
+  font-size: var(--step);
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, p, ul, ol { margin: 0; }
+ul, ol { padding: 0; list-style: none; }
+button { font: inherit; color: inherit; }
+
+:focus-visible {
+  outline: 2px solid var(--route);
+  outline-offset: 2px;
+  border-radius: var(--r-sm);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}
+
+/* ——— каркас ——— */
+
+.app {
+  min-height: 100dvh;
+  max-width: var(--shell);
+  margin: 0 auto;
+  background: var(--paper);
+  display: flex;
+  flex-direction: column;
+}
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: var(--paper);
+  border-bottom: 1px solid var(--line-soft);
+  padding: 10px var(--pad) 0;
+}
+
+.topbar__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 34px;
+}
+
+.brand {
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  font-size: 17px;
+}
+.brand span { color: var(--route); }
+
+.topbar__stage {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--ink-3);
+  font-weight: 500;
+}
+
+.iconbtn {
+  border: 1px solid var(--line);
+  background: var(--paper);
+  border-radius: var(--r-sm);
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  flex: none;
+}
+.iconbtn:hover { background: var(--surface-2); }
+
+/* станции маршрута в шапке */
+.stations {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: 10px 0 12px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.stations::-webkit-scrollbar { display: none; }
+
+.station {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  flex: none;
+}
+.station__dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  border: 2px solid var(--line);
+  background: var(--paper);
+  flex: none;
+}
+.station__rail {
+  width: 18px;
+  height: 2px;
+  background: var(--line-soft);
+}
+.station__label {
+  font-size: 11px;
+  color: var(--ink-3);
+  margin: 0 6px 0 5px;
+  white-space: nowrap;
+}
+.station.is-done .station__dot { background: var(--route); border-color: var(--route); }
+.station.is-done .station__label { color: var(--ink-2); }
+.station.is-done + .station .station__rail { background: var(--route); }
+.station.is-now .station__dot {
+  border-color: var(--route);
+  box-shadow: 0 0 0 4px var(--route-soft);
+}
+.station.is-now .station__label { color: var(--route); font-weight: 700; }
+
+.main { flex: 1; padding: var(--pad) var(--pad) 40px; }
+.main.has-dock { padding-bottom: 104px; }
+
+/* ——— типографика ——— */
+
+.h1 {
+  font-size: clamp(25px, 6.6vw, 32px);
+  line-height: 1.12;
+  letter-spacing: -0.025em;
+  font-weight: 800;
+}
+.h2 {
+  font-size: 19px;
+  line-height: 1.22;
+  letter-spacing: -0.015em;
+  font-weight: 700;
+}
+.h3 { font-size: 15px; font-weight: 700; letter-spacing: -0.01em; }
+.lead { color: var(--ink-2); line-height: 1.55; }
+.small { font-size: 13px; color: var(--ink-2); line-height: 1.5; }
+.tiny { font-size: 11.5px; color: var(--ink-3); line-height: 1.45; }
+.stack > * + * { margin-top: var(--gap); }
+.stack-lg > * + * { margin-top: 24px; }
+.mt-s { margin-top: 8px; }
+
+/* ——— кнопки ——— */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 13px 18px;
+  border-radius: var(--r);
+  border: 1px solid transparent;
+  background: var(--route);
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+  width: 100%;
+  min-height: 46px;
+}
+.btn:hover { background: #1740b4; }
+.btn:disabled { background: var(--line); color: var(--ink-3); cursor: not-allowed; }
+.btn--ghost {
+  background: var(--paper);
+  color: var(--ink);
+  border-color: var(--line);
+}
+.btn--ghost:hover { background: var(--surface-2); }
+.btn--slim { padding: 9px 14px; min-height: 38px; font-size: 13.5px; width: auto; }
+.btn-row { display: flex; gap: 10px; }
+.btn-row .btn { flex: 1; }
+
+.link {
+  color: var(--route);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+/* ——— выбор ответов ——— */
+
+.choices { display: grid; gap: 8px; }
+.choices--2 { grid-template-columns: 1fr 1fr; }
+
+.choice {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-align: left;
+  width: 100%;
+  padding: 13px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  background: var(--paper);
+  cursor: pointer;
+  line-height: 1.3;
+}
+.choice:hover { border-color: var(--ink-3); }
+.choice.is-on {
+  border-color: var(--route);
+  background: var(--route-soft);
+  font-weight: 600;
+}
+.choice__mark {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1.5px solid var(--line);
+  flex: none;
+  display: grid;
+  place-items: center;
+  background: var(--paper);
+}
+.choice.is-on .choice__mark { border-color: var(--route); background: var(--route); }
+.choice.is-on .choice__mark::after {
+  content: '';
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: #fff;
+}
+.choice--box .choice__mark { border-radius: 4px; }
+.choice__ico { color: var(--ink-3); width: 16px; text-align: center; flex: none; }
+.choice.is-on .choice__ico { color: var(--route); }
+
+.slider { width: 100%; accent-color: var(--route); }
+.scorebox {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-weight: 800;
+  font-size: 34px;
+  letter-spacing: -0.03em;
+}
+.scorebox small { font-size: 14px; font-weight: 500; color: var(--ink-3); }
+
+/* ——— карточки ——— */
+
+.card {
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--paper);
+  padding: 16px;
+}
+.card--flat { background: var(--surface-2); border-color: var(--line-soft); }
+.card--target { border-color: var(--route); border-width: 1.5px; }
+
+.card__head { display: flex; align-items: flex-start; gap: 12px; }
+.card__uni { font-size: 12px; color: var(--ink-3); font-weight: 600; }
+.card__name { font-size: 16px; font-weight: 700; letter-spacing: -0.01em; line-height: 1.25; }
+.card__score {
+  margin-left: auto;
+  text-align: right;
+  flex: none;
+}
+.card__score b { font-size: 21px; font-weight: 800; letter-spacing: -0.02em; }
+.card__score span { display: block; font-size: 10.5px; color: var(--ink-3); }
+
+.rank {
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  background: var(--ink);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+
+/* сегментированная шкала: ширина = вес компонента в модели */
+.segbar { display: flex; gap: 2px; height: 8px; margin: 12px 0 0; }
+.segbar__seg {
+  background: var(--surface);
+  border-radius: 2px;
+  overflow: hidden;
+  position: relative;
+}
+.segbar__fill { position: absolute; inset: 0 auto 0 0; background: var(--route); }
+.segbar__seg[data-weak='1'] .segbar__fill { background: var(--risk); }
+.segbar__seg[data-mid='1'] .segbar__fill { background: var(--grant); }
+
+.reasons { border-top: 1px solid var(--line-soft); margin-top: 14px; padding-top: 12px; }
+.reason { display: flex; gap: 10px; align-items: flex-start; }
+.reason + .reason { margin-top: 10px; }
+.reason__key {
+  font-size: 11px;
+  color: var(--ink-3);
+  font-weight: 600;
+  width: 92px;
+  flex: none;
+  padding-top: 1px;
+  line-height: 1.3;
+}
+.reason__txt { font-size: 13px; line-height: 1.45; color: var(--ink-2); }
+.reason__txt b { color: var(--ink); font-weight: 600; }
+
+/* ——— чипы и метки ——— */
+
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 100px;
+  background: var(--surface);
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+.chip--good { background: var(--good-soft); color: var(--good); }
+.chip--grant { background: var(--grant-soft); color: var(--grant); }
+.chip--risk { background: var(--risk-soft); color: var(--risk); }
+.chip--route { background: var(--route-soft); color: var(--route); }
+.chip--demo {
+  background: transparent;
+  border: 1px dashed var(--line);
+  color: var(--ink-3);
+  font-weight: 500;
+}
+
+.note {
+  font-size: 12px;
+  color: var(--ink-2);
+  background: var(--surface-2);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r);
+  padding: 10px 12px;
+  line-height: 1.45;
+}
+.note--change {
+  background: var(--route-soft);
+  border-color: #c3d2f7;
+  color: #143a9e;
+}
+.note--warn { background: var(--grant-soft); border-color: #eed6ae; color: #7a4c06; }
+.note b { font-weight: 700; }
+
+/* ——— диагностика ——— */
+
+.facts { display: grid; gap: 1px; background: var(--line-soft); border-radius: var(--r); overflow: hidden; }
+.fact { background: var(--paper); padding: 12px 14px; display: flex; gap: 12px; }
+.fact__k { font-size: 12px; color: var(--ink-3); width: 96px; flex: none; }
+.fact__v { font-size: 13.5px; font-weight: 600; }
+
+.bullets .bullet { display: flex; gap: 9px; font-size: 13.5px; line-height: 1.45; }
+.bullets .bullet + .bullet { margin-top: 8px; }
+.bullet__m { flex: none; font-weight: 700; width: 14px; }
+.bullet--plus .bullet__m { color: var(--good); }
+.bullet--minus .bullet__m { color: var(--grant); }
+
+/* ——— сравнение ——— */
+
+.cmp { width: 100%; border-collapse: collapse; font-size: 13px; }
+.cmp th, .cmp td {
+  border-bottom: 1px solid var(--line-soft);
+  padding: 10px 8px;
+  text-align: left;
+  vertical-align: top;
+}
+.cmp thead th { font-size: 11.5px; color: var(--ink-3); font-weight: 600; }
+.cmp tbody th { font-size: 11.5px; color: var(--ink-3); font-weight: 600; width: 88px; }
+.cmp td { font-weight: 500; }
+.cmp tr.is-priority td, .cmp tr.is-priority th { background: var(--route-soft); }
+.cmp .win { color: var(--good); font-weight: 700; }
+.scrollx { overflow-x: auto; margin: 0 calc(var(--pad) * -1); padding: 0 var(--pad); }
+
+/* ——— маршрут ——— */
+
+.route { position: relative; padding-left: 26px; }
+.route::before {
+  content: '';
+  position: absolute;
+  left: 4px; top: 6px; bottom: 6px;
+  width: 2px;
+  background: var(--line);
+}
+.step { position: relative; padding: 0 0 18px; }
+.step::before {
+  content: '';
+  position: absolute;
+  left: -26px; top: 4px;
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  background: var(--paper);
+  border: 2px solid var(--line);
+}
+.step.is-done::before { background: var(--route); border-color: var(--route); }
+.step.is-next::before { border-color: var(--route); box-shadow: 0 0 0 4px var(--route-soft); }
+.step__when { font-size: 11.5px; color: var(--ink-3); font-weight: 600; }
+.step__title { font-size: 14.5px; font-weight: 700; letter-spacing: -0.01em; margin-top: 1px; }
+.step.is-done .step__title { color: var(--ink-3); text-decoration: line-through; }
+.step__detail { font-size: 13px; color: var(--ink-2); line-height: 1.45; margin-top: 5px; }
+.step__meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 8px; }
+.check {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  border-radius: 100px;
+  padding: 5px 11px 5px 7px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.check__box {
+  width: 15px; height: 15px;
+  border: 1.5px solid var(--line);
+  border-radius: 4px;
+  display: grid;
+  place-items: center;
+  font-size: 10px;
+  color: transparent;
+}
+.check.is-on { border-color: var(--route); color: var(--route); background: var(--route-soft); }
+.check.is-on .check__box { background: var(--route); border-color: var(--route); color: #fff; }
+
+.progress {
+  height: 6px;
+  background: var(--surface);
+  border-radius: 100px;
+  overflow: hidden;
+}
+.progress__fill { height: 100%; background: var(--route); border-radius: 100px; transition: width .25s ease; }
+
+/* ——— док «следующий шаг» ——— */
+
+.dock {
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  z-index: 30;
+  background: var(--paper);
+  border-top: 1px solid var(--line);
+  padding: 12px var(--pad) calc(12px + env(safe-area-inset-bottom));
+  max-width: var(--shell);
+  margin: 0 auto;
+  box-shadow: 0 -8px 24px rgba(20, 32, 46, .07);
+}
+.dock__row { display: flex; align-items: center; gap: 12px; }
+.dock__k { font-size: 10.5px; color: var(--route); font-weight: 700; letter-spacing: .04em; }
+.dock__t { font-size: 13.5px; font-weight: 700; line-height: 1.25; }
+.dock__when { font-size: 11.5px; color: var(--ink-3); }
+
+/* ——— лист с подробностями ——— */
+
+.sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: rgba(20, 32, 46, .42);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+.sheet__body {
+  background: var(--paper);
+  width: 100%;
+  max-width: var(--shell);
+  max-height: 92dvh;
+  overflow-y: auto;
+  border-radius: 18px 18px 0 0;
+  padding: 18px var(--pad) calc(28px + env(safe-area-inset-bottom));
+}
+.sheet__grab { width: 40px; height: 4px; background: var(--line); border-radius: 100px; margin: 0 auto 14px; }
+
+/* ——— пустые и предельные состояния ——— */
+
+.empty {
+  border: 1px dashed var(--line);
+  border-radius: var(--r-lg);
+  padding: 26px 18px;
+  text-align: center;
+  background: var(--surface-2);
+}
+.empty__t { font-weight: 700; }
+.empty__d { font-size: 13px; color: var(--ink-2); margin-top: 6px; }
+
+.rail { display: none; }
+
+/* ——— рабочий стол: маршрут уходит в боковую колонку ——— */
+
+@media (min-width: 900px) {
+  :root { --shell: 1000px; }
+  .rail { display: block; }
+  body { padding: 28px 0; }
+  .app {
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    overflow: hidden;
+    min-height: auto;
+  }
+  .layout { display: grid; grid-template-columns: 236px 1fr; }
+  .rail {
+    border-right: 1px solid var(--line-soft);
+    padding: var(--pad);
+    background: var(--surface-2);
+  }
+  .rail .stations {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0;
+    padding: 0;
+    overflow: visible;
+  }
+  .rail .station { flex-direction: row; padding: 7px 0; }
+  .rail .station__rail { display: none; }
+  .rail .station__label { font-size: 12.5px; }
+  .rail .station { position: relative; }
+  .rail .station::before {
+    content: '';
+    position: absolute;
+    left: 4px; top: 0; bottom: 0;
+    width: 2px;
+    background: var(--line-soft);
+    z-index: -1;
+  }
+  .rail .station.is-done::before { background: var(--route); }
+  .topbar .stations { display: none; }
+  .main { padding: 26px 30px 40px; max-width: 660px; }
+  .main.has-dock { padding-bottom: 26px; }
+  .dock { position: static; max-width: none; box-shadow: none; border-top: 0; }
+  .dock-wrap {
+    margin: 0 30px 26px;
+    border: 1.5px solid var(--route);
+    border-radius: var(--r-lg);
+    overflow: hidden;
+    max-width: 600px;
+  }
+  .sheet { align-items: center; padding: 24px; }
+  .sheet__body { border-radius: 18px; max-width: 620px; }
+  .sheet__grab { display: none; }
+}
+
+</style>
+</head>
+<body>
+<div class="app" id="app"></div>
+<noscript>
+  <div style="padding:24px;font-family:system-ui">
+    <h1>Bagyt</h1>
+    <p>Для работы сервиса нужен включённый JavaScript: весь подбор считается в браузере,
+    без отправки ваших данных на сервер.</p>
+  </div>
+</noscript>
+<script>
+(function () {
+'use strict';
+/* ===== src/data/taxonomy.js ===== */
+// Справочники предметной области: направления, профильные предметы ЕНТ,
+// пороговые баллы, бюджетные уровни, города.
+// Источники по пороговым баллам и формату ЕНТ указаны в SOURCES.
+
+const ENT_MAX = 140;
+
+const SOURCES = {
+  entFormat: {
+    label: 'НЦТ: формат и сроки ЕНТ-2026',
+    url: 'https://testcenter.kz/',
+  },
+  thresholds: {
+    label: 'Пороговые баллы ЕНТ-2026',
+    url: 'https://www.nur.kz/society/2348017-porogovye-bally-i-granty-vypusknikam-kazahstana-raskryli-informaciyu-po-ent-2026/',
+  },
+  grantRules: {
+    label: 'Правила конкурса на образовательный грант',
+    url: 'https://egov.kz/',
+  },
+  cutoffs: {
+    label: 'Проходные баллы на грант прошлых лет',
+    url: 'https://univision.kz/grant/passing.html',
+  },
+};
+
+// Направления. related — смежные направления для «частичного» совпадения.
+const FIELDS = [
+  { id: 'it', name: 'Программирование и IT', acc: 'программирование', icon: '⌘', related: ['data', 'eng'] },
+  { id: 'data', name: 'Данные, AI и аналитика', acc: 'анализ данных', icon: '∿', related: ['it', 'econ'] },
+  { id: 'eng', name: 'Инженерия и производство', acc: 'инженерию', icon: '⚙', related: ['energy', 'build', 'it'] },
+  { id: 'energy', name: 'Энергетика и нефтегаз', acc: 'энергетику', icon: '△', related: ['eng', 'build'] },
+  { id: 'econ', name: 'Экономика и финансы', acc: 'экономику и финансы', icon: '₸', related: ['biz', 'data'] },
+  { id: 'biz', name: 'Бизнес и менеджмент', acc: 'менеджмент', icon: '◫', related: ['econ', 'law'] },
+  { id: 'law', name: 'Право', acc: 'право', icon: '§', related: ['biz', 'soc'] },
+  { id: 'soc', name: 'Общество, политика, медиа', acc: 'медиа и общественные науки', icon: '◍', related: ['law', 'lang', 'design'] },
+  { id: 'med', name: 'Медицина и здоровье', acc: 'медицину', icon: '✚', related: ['bio'] },
+  { id: 'bio', name: 'Биология и химия', acc: 'биологию и химию', icon: '◇', related: ['med', 'agro'] },
+  { id: 'edu', name: 'Педагогика', acc: 'педагогику', icon: '✎', related: ['lang', 'soc'] },
+  { id: 'lang', name: 'Языки и перевод', acc: 'языки и перевод', icon: '⌥', related: ['edu', 'soc'] },
+  { id: 'design', name: 'Дизайн и архитектура', acc: 'дизайн', icon: '◐', related: ['build', 'soc'] },
+  { id: 'build', name: 'Строительство и архитектура', acc: 'строительство', icon: '⌂', related: ['eng', 'design'] },
+  { id: 'agro', name: 'Агро и экология', acc: 'агронауки и экологию', icon: '♁', related: ['bio', 'eng'] },
+];
+
+const fieldById = (id) => FIELDS.find((f) => f.id === id);
+const fieldAcc = (id) => (fieldById(id) ? fieldById(id).acc : id);
+
+// Русская плюрализация: 1 балл, 2 балла, 5 баллов.
+function plural(n, one, few, many) {
+  const a = Math.abs(n) % 100;
+  const b = a % 10;
+  if (a > 10 && a < 20) return many;
+  if (b > 1 && b < 5) return few;
+  if (b === 1) return one;
+  return many;
+}
+const points = (n) => `${n} ${plural(n, 'балл', 'балла', 'баллов')}`;
+const fieldName = (id) => (fieldById(id) ? fieldById(id).name : id);
+
+// Профильные предметы ЕНТ: абитуриент выбирает одну пару.
+// Пара определяет, на какие группы образовательных программ он имеет право.
+const SUBJECT_PAIRS = [
+  { id: 'math_phys', name: 'Математика — Физика' },
+  { id: 'math_geo', name: 'Математика — География' },
+  { id: 'math_inf', name: 'Математика — Информатика' },
+  { id: 'bio_chem', name: 'Биология — Химия' },
+  { id: 'bio_geo', name: 'Биология — География' },
+  { id: 'chem_phys', name: 'Химия — Физика' },
+  { id: 'hist_law', name: 'Всемирная история — Основы права' },
+  { id: 'lang_hist', name: 'Иностранный язык — Всемирная история' },
+  { id: 'kaz_lit', name: 'Казахский язык — Казахская литература' },
+  { id: 'rus_lit', name: 'Русский язык — Русская литература' },
+  { id: 'creative', name: 'Творческий экзамен' },
+];
+
+const pairName = (id) => {
+  const p = SUBJECT_PAIRS.find((s) => s.id === id);
+  return p ? p.name : id;
+};
+
+// Пороговые баллы (общегосударственные, ЕНТ-2026).
+// Национальные вузы — 65, остальные — 50; профильные исключения выше.
+const THRESHOLDS = {
+  default: 50,
+  national: 65,
+  byField: {
+    law: 75,
+    edu: 75,
+    med: 70,
+    agro: 60,
+  },
+};
+
+function thresholdFor(program) {
+  const byField = program.fields
+    .map((f) => THRESHOLDS.byField[f])
+    .filter(Boolean);
+  const base = program.national ? THRESHOLDS.national : THRESHOLDS.default;
+  return Math.max(base, ...byField, 0);
+}
+
+const LANGS = [
+  { id: 'kz', name: 'Казахский' },
+  { id: 'ru', name: 'Русский' },
+  { id: 'en', name: 'Английский' },
+];
+
+const langName = (id) => {
+  const l = LANGS.find((x) => x.id === id);
+  return l ? l.name : id;
+};
+
+const CITIES = [
+  { id: 'almaty', name: 'Алматы' },
+  { id: 'astana', name: 'Астана' },
+  { id: 'shymkent', name: 'Шымкент' },
+  { id: 'karaganda', name: 'Караганда' },
+  { id: 'kaskelen', name: 'Каскелен' },
+  { id: 'other', name: 'Другой регион' },
+];
+
+const cityName = (id) => {
+  const c = CITIES.find((x) => x.id === id);
+  return c ? c.name : id;
+};
+
+const MOBILITY = [
+  { id: 'home', name: 'Только мой город' },
+  { id: 'majors', name: 'Готов переехать в Алматы или Астану' },
+  { id: 'any', name: 'Куда угодно по Казахстану' },
+];
+
+// Бюджет: максимум, который семья готова платить за год, в тенге.
+const BUDGETS = [
+  { id: 'grant', name: 'Только грант', cap: 0 },
+  { id: 'to1', name: 'До 1 млн ₸ в год', cap: 1_000_000 },
+  { id: 'to2', name: 'До 2 млн ₸ в год', cap: 2_000_000 },
+  { id: 'to4', name: 'До 4 млн ₸ в год', cap: 4_000_000 },
+  { id: 'open', name: 'Без жёсткого ограничения', cap: 99_000_000 },
+];
+
+const budgetById = (id) => BUDGETS.find((b) => b.id === id) || BUDGETS[0];
+
+// Что для абитуриента важнее — влияет на сравнение и на порядок объяснений.
+const PRIORITIES = [
+  { id: 'grant', name: 'Шансы на грант' },
+  { id: 'quality', name: 'Репутация вуза' },
+  { id: 'city', name: 'Город и близость к дому' },
+  { id: 'cost', name: 'Стоимость обучения' },
+  { id: 'lang', name: 'Язык обучения' },
+  { id: 'career', name: 'Трудоустройство после выпуска' },
+];
+
+const priorityName = (id) => {
+  const p = PRIORITIES.find((x) => x.id === id);
+  return p ? p.name : id;
+};
+
+const GRADES = [
+  { id: '9', name: '9 класс' },
+  { id: '10', name: '10 класс' },
+  { id: '11', name: '11 класс' },
+  { id: 'grad', name: 'Уже выпустился' },
+];
+
+const GPA_LEVELS = [
+  { id: 'low', name: 'В основном тройки', bonus: -6 },
+  { id: 'mid', name: 'Четвёрки и тройки', bonus: -2 },
+  { id: 'good', name: 'В основном четвёрки', bonus: 2 },
+  { id: 'top', name: 'Почти все пятёрки', bonus: 6 },
+];
+
+const gpaBonus = (id) => {
+  const g = GPA_LEVELS.find((x) => x.id === id);
+  return g ? g.bonus : 0;
+};
+
+/* ===== src/data/programs.js ===== */
+// Каталог образовательных программ бакалавриата Казахстана.
+//
+// ЧТО ПРОВЕРЕНО: название вуза, город, языки обучения, ссылка на официальный сайт,
+// требуемая пара профильных предметов ЕНТ, код ГОП (указан только там, где подтверждён).
+//
+// ЧТО ДЕМОНСТРАЦИОННОЕ (поле demoFields): проходной балл на грант (cutoff),
+// стоимость обучения (tuition), число грантов (grantSeats), оценки репутации и
+// трудоустройства (rep / career). Это ориентиры для демонстрации логики сервиса.
+// В интерфейсе такие числа всегда помечены значком «демо».
+
+const DATA_NOTE =
+  'Проходные баллы и стоимость обучения — демонстрационные ориентиры по данным ' +
+  'приёмных кампаний прошлых лет. Перед решением проверьте цифры на сайте вуза ' +
+  'и на testcenter.kz.';
+
+const P = (o) => ({
+  demoFields: ['cutoff', 'tuition', 'grantSeats', 'rep', 'career'],
+  national: false,
+  gop: null,
+  track: 'ent',
+  dorm: true,
+  ...o,
+});
+
+const PROGRAMS = [
+  // ——— IT и данные ———
+  P({ id: 'kbtu-cs', uni: 'Казахстанско-Британский технический университет', short: 'КБТУ',
+    site: 'https://kbtu.edu.kz', city: 'almaty', gop: 'B057',
+    name: 'Информационные технологии (Computer Science)',
+    fields: ['it', 'data'], langs: ['en'], pairs: ['math_phys', 'math_inf'],
+    cutoff: 122, tuition: 3200000, grantSeats: 'mid', rep: 5, career: 5,
+    note: 'Программа на английском, сильные связи с IT-компаниями Алматы.' }),
+  P({ id: 'aitu-se', uni: 'Astana IT University', short: 'AITU',
+    site: 'https://astanait.edu.kz', city: 'astana', gop: 'B057',
+    name: 'Программная инженерия',
+    fields: ['it'], langs: ['en', 'ru'], pairs: ['math_phys', 'math_inf'],
+    cutoff: 118, tuition: 1900000, grantSeats: 'high', rep: 4, career: 5,
+    note: 'Много грантов на IT-направления, кампус в Астане.' }),
+  P({ id: 'iitu-cs', uni: 'Международный университет информационных технологий', short: 'МУИТ',
+    site: 'https://iitu.edu.kz', city: 'almaty', gop: 'B057',
+    name: 'Вычислительная техника и программное обеспечение',
+    fields: ['it'], langs: ['ru', 'en'], pairs: ['math_phys', 'math_inf'],
+    cutoff: 110, tuition: 1750000, grantSeats: 'high', rep: 4, career: 4,
+    note: 'Профильный IT-вуз в центре Алматы.' }),
+  P({ id: 'sdu-cs', uni: 'Suleyman Demirel University', short: 'SDU',
+    site: 'https://sdu.edu.kz', city: 'kaskelen', gop: 'B057',
+    name: 'Computer Science',
+    fields: ['it'], langs: ['en'], pairs: ['math_phys', 'math_inf'],
+    cutoff: 108, tuition: 1950000, grantSeats: 'mid', rep: 4, career: 4,
+    note: 'Кампус в Каскелене, обучение полностью на английском.' }),
+  P({ id: 'kaznu-is', uni: 'КазНУ им. аль-Фараби', short: 'КазНУ',
+    site: 'https://www.kaznu.kz', city: 'almaty', gop: 'B057', national: true,
+    name: 'Информационные системы',
+    fields: ['it', 'data'], langs: ['kz', 'ru'], pairs: ['math_phys', 'math_inf'],
+    cutoff: 115, tuition: 1400000, grantSeats: 'high', rep: 5, career: 4,
+    note: 'Национальный вуз, порог для поступления выше — 65 баллов.' }),
+  P({ id: 'enu-inf', uni: 'ЕНУ им. Л.Н. Гумилёва', short: 'ЕНУ',
+    site: 'https://www.enu.kz', city: 'astana', gop: 'B057', national: true,
+    name: 'Информатика',
+    fields: ['it'], langs: ['kz', 'ru'], pairs: ['math_phys', 'math_inf'],
+    cutoff: 112, tuition: 1250000, grantSeats: 'high', rep: 5, career: 4,
+    note: 'Национальный вуз в Астане с большим числом грантов.' }),
+  P({ id: 'satbayev-auto', uni: 'Satbayev University', short: 'Satbayev',
+    site: 'https://satbayev.university', city: 'almaty', gop: 'B057',
+    name: 'Автоматизация и цифровая инженерия',
+    fields: ['it', 'eng'], langs: ['kz', 'ru'], pairs: ['math_phys'],
+    cutoff: 102, tuition: 1300000, grantSeats: 'high', rep: 4, career: 4,
+    note: 'IT на стыке с промышленной инженерией.' }),
+  P({ id: 'kstu-is', uni: 'Карагандинский технический университет', short: 'КарТУ',
+    site: 'https://www.kstu.kz', city: 'karaganda', gop: 'B057',
+    name: 'Информационные системы',
+    fields: ['it'], langs: ['kz', 'ru'], pairs: ['math_phys', 'math_inf'],
+    cutoff: 88, tuition: 900000, grantSeats: 'high', rep: 3, career: 3,
+    note: 'Доступный порог и низкая стоимость, регион — Караганда.' }),
+  P({ id: 'aitu-bigdata', uni: 'Astana IT University', short: 'AITU',
+    site: 'https://astanait.edu.kz', city: 'astana', gop: 'B057',
+    name: 'Анализ больших данных',
+    fields: ['data', 'it'], langs: ['en', 'ru'], pairs: ['math_phys', 'math_inf'],
+    cutoff: 116, tuition: 1900000, grantSeats: 'mid', rep: 4, career: 5,
+    note: 'Одна из немногих отдельных программ по данным в стране.' }),
+  P({ id: 'kbtu-ds', uni: 'Казахстанско-Британский технический университет', short: 'КБТУ',
+    site: 'https://kbtu.edu.kz', city: 'almaty',
+    name: 'Математическое и компьютерное моделирование',
+    fields: ['data'], langs: ['en'], pairs: ['math_phys'],
+    cutoff: 120, tuition: 3200000, grantSeats: 'low', rep: 5, career: 5,
+    note: 'Сильная математика, выход в Data Science и финансы.' }),
+  P({ id: 'iitu-ai', uni: 'Международный университет информационных технологий', short: 'МУИТ',
+    site: 'https://iitu.edu.kz', city: 'almaty',
+    name: 'Искусственный интеллект',
+    fields: ['data', 'it'], langs: ['ru', 'en'], pairs: ['math_phys', 'math_inf'],
+    cutoff: 108, tuition: 1800000, grantSeats: 'mid', rep: 4, career: 4,
+    note: 'Практический уклон в машинное обучение.' }),
+  P({ id: 'kaznu-math', uni: 'КазНУ им. аль-Фараби', short: 'КазНУ',
+    site: 'https://www.kaznu.kz', city: 'almaty', national: true,
+    name: 'Математика и статистика',
+    fields: ['data'], langs: ['kz', 'ru'], pairs: ['math_phys', 'math_inf'],
+    cutoff: 98, tuition: 1300000, grantSeats: 'high', rep: 5, career: 3,
+    note: 'Много грантов, база для аналитики и науки о данных.' }),
+
+  // ——— Инженерия, энергетика ———
+  P({ id: 'satbayev-oil', uni: 'Satbayev University', short: 'Satbayev',
+    site: 'https://satbayev.university', city: 'almaty',
+    name: 'Нефтегазовое дело',
+    fields: ['energy', 'eng'], langs: ['kz', 'ru', 'en'], pairs: ['math_phys', 'chem_phys'],
+    cutoff: 105, tuition: 1450000, grantSeats: 'high', rep: 4, career: 5,
+    note: 'Отраслевой вуз с прямым выходом в нефтегазовые компании.' }),
+  P({ id: 'kbtu-petro', uni: 'Казахстанско-Британский технический университет', short: 'КБТУ',
+    site: 'https://kbtu.edu.kz', city: 'almaty',
+    name: 'Нефтегазовая инженерия',
+    fields: ['energy'], langs: ['en'], pairs: ['math_phys', 'chem_phys'],
+    cutoff: 118, tuition: 3400000, grantSeats: 'mid', rep: 5, career: 5,
+    note: 'Самая дорогая и самая востребованная нефтегазовая программа.' }),
+  P({ id: 'satbayev-mech', uni: 'Satbayev University', short: 'Satbayev',
+    site: 'https://satbayev.university', city: 'almaty', gop: 'B063',
+    name: 'Механика и металлообработка',
+    fields: ['eng'], langs: ['kz', 'ru'], pairs: ['math_phys'],
+    cutoff: 88, tuition: 1200000, grantSeats: 'high', rep: 4, career: 4,
+    note: 'Низкий проходной балл при большом числе грантов.' }),
+  P({ id: 'kstu-mine', uni: 'Карагандинский технический университет', short: 'КарТУ',
+    site: 'https://www.kstu.kz', city: 'karaganda',
+    name: 'Горное дело',
+    fields: ['eng', 'energy'], langs: ['kz', 'ru'], pairs: ['math_phys'],
+    cutoff: 82, tuition: 950000, grantSeats: 'high', rep: 3, career: 4,
+    note: 'Профильный регион горнодобычи, высокий спрос на выпускников.' }),
+  P({ id: 'enu-power', uni: 'ЕНУ им. Л.Н. Гумилёва', short: 'ЕНУ',
+    site: 'https://www.enu.kz', city: 'astana', gop: 'B062', national: true,
+    name: 'Электроэнергетика',
+    fields: ['energy', 'eng'], langs: ['kz', 'ru'], pairs: ['math_phys'],
+    cutoff: 92, tuition: 1150000, grantSeats: 'high', rep: 5, career: 4,
+    note: 'Национальный вуз, стабильный госзаказ на энергетику.' }),
+  P({ id: 'auezov-chem', uni: 'ЮКУ им. М. Ауэзова', short: 'ЮКУ',
+    site: 'https://auezov.edu.kz', city: 'shymkent',
+    name: 'Химическая технология органических веществ',
+    fields: ['eng', 'bio'], langs: ['kz', 'ru'], pairs: ['chem_phys', 'bio_chem'],
+    cutoff: 72, tuition: 850000, grantSeats: 'high', rep: 3, career: 3,
+    note: 'Самый доступный вход в химическую инженерию.' }),
+  P({ id: 'kazatu-agroeng', uni: 'КазАТУ им. С. Сейфуллина', short: 'КазАТУ',
+    site: 'https://kazatu.edu.kz', city: 'astana', gop: 'B063',
+    name: 'Агроинженерия',
+    fields: ['eng', 'agro'], langs: ['kz', 'ru'], pairs: ['math_phys'],
+    cutoff: 70, tuition: 900000, grantSeats: 'high', rep: 3, career: 4,
+    note: 'Инженерия для агросектора, много бюджетных мест.' }),
+
+  // ——— Экономика и бизнес ———
+  P({ id: 'kimep-fin', uni: 'КИМЭП', short: 'КИМЭП',
+    site: 'https://kimep.kz', city: 'almaty', gop: 'B046',
+    name: 'Финансы',
+    fields: ['econ'], langs: ['en'], pairs: ['math_geo', 'math_phys'],
+    cutoff: 112, tuition: 3300000, grantSeats: 'low', rep: 5, career: 5,
+    note: 'Обучение на английском, сильный выход в банки и консалтинг.' }),
+  P({ id: 'narxoz-fin', uni: 'Narxoz University', short: 'Нархоз',
+    site: 'https://narxoz.kz', city: 'almaty', gop: 'B046',
+    name: 'Финансы',
+    fields: ['econ'], langs: ['ru', 'kz', 'en'], pairs: ['math_geo', 'math_phys'],
+    cutoff: 100, tuition: 1600000, grantSeats: 'mid', rep: 4, career: 4,
+    note: 'Профильный экономический вуз с умеренной стоимостью.' }),
+  P({ id: 'kaznu-econ', uni: 'КазНУ им. аль-Фараби', short: 'КазНУ',
+    site: 'https://www.kaznu.kz', city: 'almaty', gop: 'B046', national: true,
+    name: 'Экономика',
+    fields: ['econ'], langs: ['kz', 'ru'], pairs: ['math_geo'],
+    cutoff: 105, tuition: 1450000, grantSeats: 'high', rep: 5, career: 4,
+    note: 'Национальный вуз, много грантов на экономику.' }),
+  P({ id: 'almau-mgmt', uni: 'Алматы Менеджмент Университет', short: 'AlmaU',
+    site: 'https://almau.edu.kz', city: 'almaty', gop: 'B044',
+    name: 'Менеджмент',
+    fields: ['biz'], langs: ['ru', 'en'], pairs: ['math_geo', 'hist_law'],
+    cutoff: 96, tuition: 1900000, grantSeats: 'mid', rep: 4, career: 4,
+    note: 'Практико-ориентированный бизнес-вуз, много проектов с компаниями.' }),
+  P({ id: 'kimep-biz', uni: 'КИМЭП', short: 'КИМЭП',
+    site: 'https://kimep.kz', city: 'almaty', gop: 'B044',
+    name: 'Международный бизнес',
+    fields: ['biz', 'econ'], langs: ['en'], pairs: ['math_geo', 'lang_hist'],
+    cutoff: 108, tuition: 3300000, grantSeats: 'low', rep: 5, career: 5,
+    note: 'Программа на английском с международным набором.' }),
+  P({ id: 'enu-econ', uni: 'ЕНУ им. Л.Н. Гумилёва', short: 'ЕНУ',
+    site: 'https://www.enu.kz', city: 'astana', gop: 'B046', national: true,
+    name: 'Экономика',
+    fields: ['econ'], langs: ['kz', 'ru'], pairs: ['math_geo'],
+    cutoff: 98, tuition: 1200000, grantSeats: 'high', rep: 5, career: 4,
+    note: 'Национальный вуз, близость к госорганам Астаны.' }),
+  P({ id: 'turan-mgmt', uni: 'Университет «Туран»', short: 'Туран',
+    site: 'https://turan-edu.kz', city: 'almaty', gop: 'B044',
+    name: 'Менеджмент',
+    fields: ['biz'], langs: ['ru', 'kz'], pairs: ['math_geo', 'hist_law'],
+    cutoff: 78, tuition: 1100000, grantSeats: 'mid', rep: 3, career: 3,
+    note: 'Доступный вход в бизнес-направление в Алматы.' }),
+  P({ id: 'narxoz-acc', uni: 'Narxoz University', short: 'Нархоз',
+    site: 'https://narxoz.kz', city: 'almaty',
+    name: 'Учёт и аудит',
+    fields: ['econ', 'biz'], langs: ['ru', 'kz'], pairs: ['math_geo'],
+    cutoff: 92, tuition: 1500000, grantSeats: 'high', rep: 4, career: 4,
+    note: 'Понятная карьерная траектория в аудит и налоги.' }),
+
+  // ——— Право, общество, медиа ———
+  P({ id: 'mnu-law', uni: 'Maqsut Narikbayev University', short: 'MNU',
+    site: 'https://mnu.kz', city: 'astana', gop: 'B049',
+    name: 'Юриспруденция',
+    fields: ['law'], langs: ['ru', 'kz', 'en'], pairs: ['hist_law'],
+    cutoff: 116, tuition: 1800000, grantSeats: 'mid', rep: 5, career: 5,
+    note: 'Ведущий юридический вуз страны. Порог по направлению — 75 баллов.' }),
+  P({ id: 'kaznu-law', uni: 'КазНУ им. аль-Фараби', short: 'КазНУ',
+    site: 'https://www.kaznu.kz', city: 'almaty', gop: 'B049', national: true,
+    name: 'Юриспруденция',
+    fields: ['law'], langs: ['kz', 'ru'], pairs: ['hist_law'],
+    cutoff: 118, tuition: 1600000, grantSeats: 'mid', rep: 5, career: 4,
+    note: 'Высокая конкуренция: национальный вуз и порог 75 баллов.' }),
+  P({ id: 'narxoz-law', uni: 'Narxoz University', short: 'Нархоз',
+    site: 'https://narxoz.kz', city: 'almaty', gop: 'B049',
+    name: 'Право',
+    fields: ['law'], langs: ['ru', 'kz'], pairs: ['hist_law'],
+    cutoff: 102, tuition: 1550000, grantSeats: 'mid', rep: 4, career: 3,
+    note: 'Уклон в корпоративное и финансовое право.' }),
+  P({ id: 'kaznu-jour', uni: 'КазНУ им. аль-Фараби', short: 'КазНУ',
+    site: 'https://www.kaznu.kz', city: 'almaty', gop: 'B042', national: true,
+    name: 'Журналистика',
+    fields: ['soc'], langs: ['kz', 'ru'], pairs: ['creative'],
+    cutoff: 104, tuition: 1300000, grantSeats: 'mid', rep: 5, career: 3,
+    note: 'Нужен творческий экзамен вместо второй пары профильных предметов.' }),
+  P({ id: 'mnu-ir', uni: 'Maqsut Narikbayev University', short: 'MNU',
+    site: 'https://mnu.kz', city: 'astana',
+    name: 'Международные отношения',
+    fields: ['soc', 'law'], langs: ['en', 'ru'], pairs: ['lang_hist', 'hist_law'],
+    cutoff: 108, tuition: 1750000, grantSeats: 'mid', rep: 4, career: 4,
+    note: 'Астана даёт доступ к практике в госорганах и посольствах.' }),
+  P({ id: 'kaznu-polit', uni: 'КазНУ им. аль-Фараби', short: 'КазНУ',
+    site: 'https://www.kaznu.kz', city: 'almaty', national: true,
+    name: 'Политология',
+    fields: ['soc'], langs: ['kz', 'ru'], pairs: ['hist_law', 'lang_hist'],
+    cutoff: 95, tuition: 1250000, grantSeats: 'high', rep: 5, career: 3,
+    note: 'Много грантов, умеренный проходной балл.' }),
+
+  // ——— Медицина, биология ———
+  P({ id: 'kaznmu-med', uni: 'КазНМУ им. С.Д. Асфендиярова', short: 'КазНМУ',
+    site: 'https://kaznmu.edu.kz', city: 'almaty', gop: 'B086',
+    name: 'Общая медицина',
+    fields: ['med'], langs: ['kz', 'ru'], pairs: ['bio_chem'],
+    cutoff: 126, tuition: 2300000, grantSeats: 'mid', rep: 5, career: 5,
+    note: '5 лет бакалавриата плюс интернатура. Порог по направлению — 70 баллов.' }),
+  P({ id: 'amu-med', uni: 'Медицинский университет Астана', short: 'АМУ',
+    site: 'https://amu.edu.kz', city: 'astana', gop: 'B086',
+    name: 'Общая медицина',
+    fields: ['med'], langs: ['kz', 'ru'], pairs: ['bio_chem'],
+    cutoff: 120, tuition: 2100000, grantSeats: 'mid', rep: 4, career: 5,
+    note: 'Проходной балл обычно ниже, чем в КазНМУ, при том же направлении.' }),
+  P({ id: 'kaznmu-dent', uni: 'КазНМУ им. С.Д. Асфендиярова', short: 'КазНМУ',
+    site: 'https://kaznmu.edu.kz', city: 'almaty',
+    name: 'Стоматология',
+    fields: ['med'], langs: ['kz', 'ru'], pairs: ['bio_chem'],
+    cutoff: 122, tuition: 2600000, grantSeats: 'low', rep: 5, career: 5,
+    note: 'Мало грантов, высокая стоимость платного обучения.' }),
+  P({ id: 'kaznmu-pharm', uni: 'КазНМУ им. С.Д. Асфендиярова', short: 'КазНМУ',
+    site: 'https://kaznmu.edu.kz', city: 'almaty',
+    name: 'Фармация',
+    fields: ['med', 'bio'], langs: ['kz', 'ru'], pairs: ['bio_chem', 'chem_phys'],
+    cutoff: 108, tuition: 1900000, grantSeats: 'mid', rep: 4, career: 4,
+    note: 'Вход в медицинскую сферу с заметно меньшим проходным баллом.' }),
+  P({ id: 'kaznu-bio', uni: 'КазНУ им. аль-Фараби', short: 'КазНУ',
+    site: 'https://www.kaznu.kz', city: 'almaty', national: true,
+    name: 'Биология',
+    fields: ['bio'], langs: ['kz', 'ru'], pairs: ['bio_chem', 'bio_geo'],
+    cutoff: 92, tuition: 1300000, grantSeats: 'high', rep: 5, career: 3,
+    note: 'Исследовательская траектория, много грантов.' }),
+
+  // ——— Педагогика и языки ———
+  P({ id: 'abai-math-edu', uni: 'КазНПУ им. Абая', short: 'КазНПУ',
+    site: 'https://kaznpu.kz', city: 'almaty',
+    name: 'Педагогика математики',
+    fields: ['edu'], langs: ['kz', 'ru'], pairs: ['math_phys', 'math_inf'],
+    cutoff: 88, tuition: 800000, grantSeats: 'high', rep: 4, career: 4,
+    note: 'Очень много грантов, но порог по педагогике — 75 баллов.' }),
+  P({ id: 'abai-eng-edu', uni: 'КазНПУ им. Абая', short: 'КазНПУ',
+    site: 'https://kaznpu.kz', city: 'almaty',
+    name: 'Педагогика иностранного языка',
+    fields: ['edu', 'lang'], langs: ['kz', 'ru', 'en'], pairs: ['lang_hist'],
+    cutoff: 92, tuition: 850000, grantSeats: 'high', rep: 4, career: 4,
+    note: 'Дефицитная специальность, стабильный госзаказ.' }),
+  P({ id: 'ablaikhan-tr', uni: 'КазУМОиМЯ им. Абылай хана', short: 'КазУМОиМЯ',
+    site: 'https://ablaikhan.kz', city: 'almaty', gop: 'B036',
+    name: 'Переводческое дело',
+    fields: ['lang'], langs: ['kz', 'ru', 'en'], pairs: ['lang_hist'],
+    cutoff: 106, tuition: 1500000, grantSeats: 'mid', rep: 5, career: 4,
+    note: 'Главный языковой вуз страны, требует сильного иностранного языка.' }),
+  P({ id: 'enu-phil', uni: 'ЕНУ им. Л.Н. Гумилёва', short: 'ЕНУ',
+    site: 'https://www.enu.kz', city: 'astana', national: true,
+    name: 'Филология',
+    fields: ['lang'], langs: ['kz', 'ru'], pairs: ['kaz_lit', 'rus_lit'],
+    cutoff: 86, tuition: 1000000, grantSeats: 'high', rep: 5, career: 3,
+    note: 'Много грантов, доступный проходной балл.' }),
+
+  // ——— Дизайн, архитектура, строительство ———
+  P({ id: 'kaznai-design', uni: 'КазНАИ им. Т. Жургенова', short: 'КазНАИ',
+    site: 'https://kaznai.kz', city: 'almaty',
+    name: 'Графический дизайн',
+    fields: ['design'], langs: ['kz', 'ru'], pairs: ['creative'],
+    cutoff: 98, tuition: 1400000, grantSeats: 'mid', rep: 4, career: 3,
+    note: 'Отбор идёт через творческий экзамен и портфолио.' }),
+  P({ id: 'kazgasa-arch', uni: 'КазГАСА', short: 'КазГАСА',
+    site: 'https://kazgasa.kz', city: 'almaty', gop: 'B073',
+    name: 'Архитектура',
+    fields: ['design', 'build'], langs: ['ru', 'kz'], pairs: ['creative'],
+    cutoff: 102, tuition: 1700000, grantSeats: 'mid', rep: 4, career: 4,
+    note: 'Творческий экзамен обязателен, нужно портфолио рисунка.' }),
+  P({ id: 'satbayev-build', uni: 'Satbayev University', short: 'Satbayev',
+    site: 'https://satbayev.university', city: 'almaty', gop: 'B074',
+    name: 'Строительство',
+    fields: ['build', 'eng'], langs: ['kz', 'ru'], pairs: ['math_phys'],
+    cutoff: 90, tuition: 1250000, grantSeats: 'high', rep: 4, career: 4,
+    note: 'Строительный бум в Алматы держит спрос на выпускников.' }),
+  P({ id: 'kstu-build', uni: 'Карагандинский технический университет', short: 'КарТУ',
+    site: 'https://www.kstu.kz', city: 'karaganda', gop: 'B074',
+    name: 'Строительство',
+    fields: ['build'], langs: ['kz', 'ru'], pairs: ['math_phys'],
+    cutoff: 76, tuition: 880000, grantSeats: 'high', rep: 3, career: 3,
+    note: 'Самый доступный путь в строительную инженерию.' }),
+
+  // ——— Агро и экология ———
+  P({ id: 'kaznaru-agro', uni: 'Казахский национальный аграрный исследовательский университет',
+    short: 'КазНАИУ', site: 'https://kaznaru.edu.kz', city: 'almaty',
+    name: 'Агрономия',
+    fields: ['agro'], langs: ['kz', 'ru'], pairs: ['bio_geo', 'bio_chem'],
+    cutoff: 68, tuition: 850000, grantSeats: 'high', rep: 3, career: 3,
+    note: 'Порог по агронаправлениям — 60 баллов, грантов много.' }),
+  P({ id: 'kazatu-vet', uni: 'КазАТУ им. С. Сейфуллина', short: 'КазАТУ',
+    site: 'https://kazatu.edu.kz', city: 'astana',
+    name: 'Ветеринарная медицина',
+    fields: ['agro', 'bio'], langs: ['kz', 'ru'], pairs: ['bio_chem'],
+    cutoff: 70, tuition: 900000, grantSeats: 'high', rep: 3, career: 4,
+    note: 'Дефицитная специальность с большим госзаказом.' }),
+  P({ id: 'kaznaru-eco', uni: 'Казахский национальный аграрный исследовательский университет',
+    short: 'КазНАИУ', site: 'https://kaznaru.edu.kz', city: 'almaty',
+    name: 'Экология',
+    fields: ['agro', 'bio'], langs: ['kz', 'ru'], pairs: ['bio_geo', 'bio_chem'],
+    cutoff: 74, tuition: 900000, grantSeats: 'high', rep: 3, career: 3,
+    note: 'Растущее направление: экологический контроль и ESG.' }),
+
+  // ——— Языки, филология, педагогика (пары по языку и литературе) ———
+  P({ id: 'abai-kaz-edu', uni: 'КазНПУ им. Абая', short: 'КазНПУ',
+    site: 'https://kaznpu.kz', city: 'almaty',
+    name: 'Педагогика казахского языка и литературы',
+    fields: ['edu', 'lang'], langs: ['kz'], pairs: ['kaz_lit'],
+    cutoff: 84, tuition: 800000, grantSeats: 'high', rep: 4, career: 4,
+    note: 'Один из самых больших госзаказов в стране, порог по педагогике — 75.' }),
+  P({ id: 'abai-rus-edu', uni: 'КазНПУ им. Абая', short: 'КазНПУ',
+    site: 'https://kaznpu.kz', city: 'almaty',
+    name: 'Педагогика русского языка и литературы',
+    fields: ['edu', 'lang'], langs: ['ru'], pairs: ['rus_lit'],
+    cutoff: 82, tuition: 800000, grantSeats: 'high', rep: 4, career: 4,
+    note: 'Дефицит учителей-предметников держит спрос стабильным.' }),
+  P({ id: 'kaznu-kazphil', uni: 'КазНУ им. аль-Фараби', short: 'КазНУ',
+    site: 'https://www.kaznu.kz', city: 'almaty', national: true,
+    name: 'Казахская филология',
+    fields: ['lang'], langs: ['kz'], pairs: ['kaz_lit'],
+    cutoff: 88, tuition: 1200000, grantSeats: 'high', rep: 5, career: 3,
+    note: 'Национальный вуз: порог 65, но много грантов на филологию.' }),
+  P({ id: 'kaznu-rusphil', uni: 'КазНУ им. аль-Фараби', short: 'КазНУ',
+    site: 'https://www.kaznu.kz', city: 'almaty', national: true,
+    name: 'Русская филология',
+    fields: ['lang'], langs: ['ru'], pairs: ['rus_lit'],
+    cutoff: 86, tuition: 1200000, grantSeats: 'high', rep: 5, career: 3,
+    note: 'Выход в редактуру, преподавание и медиа.' }),
+  P({ id: 'auezov-kaz-edu', uni: 'ЮКУ им. М. Ауэзова', short: 'ЮКУ',
+    site: 'https://auezov.edu.kz', city: 'shymkent',
+    name: 'Педагогика казахского языка и литературы',
+    fields: ['edu', 'lang'], langs: ['kz'], pairs: ['kaz_lit'],
+    cutoff: 76, tuition: 800000, grantSeats: 'high', rep: 3, career: 3,
+    note: 'Самый доступный вход в педагогику на юге страны.' }),
+  P({ id: 'kstu-rus-edu', uni: 'Карагандинский технический университет', short: 'КарТУ',
+    site: 'https://www.kstu.kz', city: 'karaganda',
+    name: 'Педагогика русского языка и литературы',
+    fields: ['edu', 'lang'], langs: ['ru'], pairs: ['rus_lit'],
+    cutoff: 78, tuition: 820000, grantSeats: 'high', rep: 3, career: 3,
+    note: 'Региональный вариант с низким проходным баллом.' }),
+
+  // ——— Творческий экзамен ———
+  P({ id: 'kaznai-interior', uni: 'КазНАИ им. Т. Жургенова', short: 'КазНАИ',
+    site: 'https://kaznai.kz', city: 'almaty',
+    name: 'Дизайн интерьера',
+    fields: ['design', 'build'], langs: ['kz', 'ru'], pairs: ['creative'],
+    cutoff: 94, tuition: 1400000, grantSeats: 'mid', rep: 4, career: 4,
+    note: 'Строительный рынок Алматы даёт много частных заказов уже во время учёбы.' }),
+  P({ id: 'kaznai-theatre', uni: 'КазНАИ им. Т. Жургенова', short: 'КазНАИ',
+    site: 'https://kaznai.kz', city: 'almaty',
+    name: 'Актёрское искусство',
+    fields: ['design', 'soc'], langs: ['kz', 'ru'], pairs: ['creative'],
+    cutoff: 90, tuition: 1300000, grantSeats: 'mid', rep: 4, career: 2,
+    note: 'Отбор почти полностью решает творческий экзамен.' }),
+  P({ id: 'enu-jour', uni: 'ЕНУ им. Л.Н. Гумилёва', short: 'ЕНУ',
+    site: 'https://www.enu.kz', city: 'astana', gop: 'B042', national: true,
+    name: 'Журналистика',
+    fields: ['soc'], langs: ['kz', 'ru'], pairs: ['creative'],
+    cutoff: 96, tuition: 1250000, grantSeats: 'mid', rep: 5, career: 3,
+    note: 'Астана — центр государственных и деловых медиа.' }),
+
+  // ——— Отдельный трек отбора (не по ЕНТ) ———
+  P({ id: 'nu-eng', uni: 'Назарбаев Университет', short: 'НУ',
+    site: 'https://nu.edu.kz', city: 'astana', track: 'alt',
+    name: 'School of Engineering and Digital Sciences',
+    fields: ['eng', 'it', 'data'], langs: ['en'], pairs: [],
+    cutoff: null, tuition: 0, grantSeats: 'high', rep: 5, career: 5,
+    note: 'Отбор не по ЕНТ: подготовительный год NUFYP, тесты SAT/IELTS и собственный конкурс. Обучение почти всегда покрывается стипендией.' }),
+];
+
+const programById = (id) => PROGRAMS.find((p) => p.id === id);
+
+const GRANT_SEATS_LABEL = {
+  high: 'много грантов',
+  mid: 'средне грантов',
+  low: 'мало грантов',
+};
+
+/* ===== src/lib/scoring.js ===== */
+// Движок подбора. Полностью детерминированный и объяснимый:
+// каждый балл соответствия раскладывается на компоненты, и у каждого
+// компонента есть текстовое объяснение с конкретными числами.
+//
+// Никакой генерации «на глаз»: одинаковый профиль всегда даёт одинаковый
+// результат, а изменение любого ответа предсказуемо меняет итог.
+//
+// Отбор идёт в три слоя:
+//   1. формальные требования — пара профильных предметов и пороговый балл;
+//      не выполнены → программа вообще недоступна;
+//   2. релевантность — направление и география; не совпали → вариант уходит
+//      в «смежные», чтобы не вытеснять то, что человек действительно искал;
+//   3. балл соответствия — взвешенная сумма шести компонентов.
+
+
+
+const WEIGHTS = {
+  interest: 28,
+  chance: 26,
+  budget: 20,
+  city: 12,
+  lang: 9,
+  subjects: 5,
+};
+
+const COMPONENT_LABEL = {
+  interest: 'Совпадение с интересами',
+  chance: 'Шансы на поступление',
+  budget: 'Бюджет',
+  city: 'Город',
+  lang: 'Язык обучения',
+  subjects: 'Профильные предметы',
+};
+
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+const fmtMoney = (t) =>
+  t === 0 ? 'стипендия' : `${(t / 1_000_000).toFixed(1).replace('.', ',')} млн ₸/год`;
+
+// Ожидаемый балл корректируется на успеваемость, только если балл ещё не сдан.
+function projectedScore(profile) {
+  const raw = Number(profile.entScore) || 0;
+  if (profile.entKnown === 'actual') return { score: raw, adjusted: 0 };
+  const adj = gpaBonus(profile.gpa);
+  return { score: clamp(raw + adj, 0, ENT_MAX), adjusted: adj };
+}
+
+// ——— Шансы на грант ———
+
+const CHANCE_LEVELS = [
+  { id: 'high', min: 10, label: 'Высокие шансы на грант', score: 100 },
+  { id: 'good', min: 3, label: 'Хорошие шансы на грант', score: 85 },
+  { id: 'border', min: -4, label: 'На границе проходного балла', score: 60 },
+  { id: 'low', min: -14, label: 'Низкие шансы на грант', score: 30 },
+  { id: 'unlikely', min: -999, label: 'Грант маловероятен', score: 10 },
+];
+
+const SEAT_ADJUST = { high: 4, mid: 0, low: -4 };
+
+function grantChance(program, profile) {
+  if (program.track === 'alt') {
+    return {
+      level: 'separate',
+      label: 'Отдельный конкурс, не по ЕНТ',
+      score: 55,
+      gap: null,
+      explain:
+        `${program.short} отбирает не по баллу ЕНТ, а через свой конкурс и ` +
+        'подготовительный год. Балл ЕНТ здесь ничего не решает.',
+    };
+  }
+  const { score: proj } = projectedScore(profile);
+  const seat = SEAT_ADJUST[program.grantSeats] ?? 0;
+  const gap = proj + seat - program.cutoff;
+  const level = CHANCE_LEVELS.find((l) => gap >= l.min);
+  const diff = proj - program.cutoff;
+  const direction =
+    diff === 0
+      ? 'это ровно на уровне вашего ориентира'
+      : diff > 0
+        ? `это на ${points(diff)} ниже вашего ориентира`
+        : `это на ${points(Math.abs(diff))} выше вашего ориентира`;
+  return {
+    level: level.id,
+    label: level.label,
+    score: level.score,
+    gap: diff,
+    explain:
+      `Ваш ориентир — ${proj} из ${ENT_MAX}. Грант здесь в прошлые годы ` +
+      `закрывался на ${program.cutoff} баллах: ${direction}.`,
+  };
+}
+
+// ——— Компоненты соответствия ———
+
+function interestPart(program, profile) {
+  const picked = profile.interests || [];
+  const direct = program.fields.filter((f) => picked.includes(f));
+  if (direct.length) {
+    return {
+      tier: 'direct',
+      score: 100,
+      explain: `Прямое попадание в ваш интерес «${fieldName(direct[0])}».`,
+    };
+  }
+  const related = program.fields.find((f) => {
+    const fd = fieldById(f);
+    return fd && fd.related.some((r) => picked.includes(r));
+  });
+  if (related) {
+    return {
+      tier: 'related',
+      score: 55,
+      explain:
+        `Смежное направление: «${fieldName(related)}» соседствует с тем, что вы выбрали, ` +
+        'но это не то же самое.',
+    };
+  }
+  return {
+    tier: 'none',
+    score: 0,
+    explain: 'Направление не связано с тем, что вы выбрали.',
+  };
+}
+
+function budgetPart(program, profile, chance) {
+  const b = budgetById(profile.budget);
+  if (program.tuition === 0) {
+    return { score: 100, explain: 'Обучение покрывается стипендией вуза.' };
+  }
+  if (b.cap === 0) {
+    const map = { high: 100, good: 85, border: 55, low: 25, unlikely: 8, separate: 70 };
+    return {
+      score: map[chance.level] ?? 30,
+      explain:
+        'Вы рассчитываете только на грант, поэтому всё зависит от шансов: ' +
+        `${chance.label.toLowerCase()}. Платно здесь ${fmtMoney(program.tuition)}.`,
+    };
+  }
+  const t = program.tuition;
+  if (t <= b.cap * 0.6) {
+    return { score: 100, explain: `${fmtMoney(t)} — заметно ниже вашего лимита.` };
+  }
+  if (t <= b.cap) {
+    return { score: 85, explain: `${fmtMoney(t)} — укладывается в ваш бюджет.` };
+  }
+  if (t <= b.cap * 1.3) {
+    return { score: 40, explain: `${fmtMoney(t)} — немного выше лимита, платно будет тяжело.` };
+  }
+  return {
+    score: 10,
+    explain: `${fmtMoney(t)} — сильно выше вашего лимита, реально только на грант.`,
+  };
+}
+
+function langPart(program, profile) {
+  const mine = profile.langs || [];
+  const shared = program.langs.filter((l) => mine.includes(l));
+  if (shared.length) {
+    return {
+      score: 100,
+      explain: `Есть обучение на вашем языке: ${shared.map(langName).join(', ').toLowerCase()}.`,
+    };
+  }
+  return {
+    score: 25,
+    explain:
+      `Обучение только на ${program.langs.map(langName).join(' / ').toLowerCase()} — ` +
+      'язык придётся подтянуть до начала учёбы.',
+  };
+}
+
+function cityPart(program, profile) {
+  const same = program.city === profile.city;
+  const major = program.city === 'almaty' || program.city === 'astana';
+  if (same) {
+    return { fits: true, score: 100, explain: `Вуз в вашем городе — ${cityName(program.city)}.` };
+  }
+  if (profile.mobility === 'home') {
+    return {
+      fits: false,
+      score: 0,
+      explain:
+        `Вуз в ${cityName(program.city)}, а вы не планируете переезд — ` +
+        'придётся менять либо город, либо вариант.',
+    };
+  }
+  if (profile.mobility === 'majors') {
+    return major
+      ? { fits: true, score: 90, explain: `${cityName(program.city)} — город, в который вы готовы переехать.` }
+      : {
+          fits: false,
+          score: 20,
+          explain: `${cityName(program.city)} не входит в города, куда вы готовы переехать.`,
+        };
+  }
+  return { fits: true, score: 85, explain: `${cityName(program.city)} — вы открыты к переезду.` };
+}
+
+function subjectsPart(program, profile) {
+  if (program.track === 'alt') {
+    return { score: 70, explain: 'Пара профильных предметов ЕНТ здесь не требуется.' };
+  }
+  if (program.pairs.includes(profile.pair)) {
+    return { score: 100, explain: `Ваша пара «${pairName(profile.pair)}» подходит.` };
+  }
+  return {
+    score: 0,
+    explain: `Нужна другая пара: ${program.pairs.map(pairName).join(' или ')}.`,
+  };
+}
+
+// ——— Формальные блокировки ———
+
+function blockers(program, profile, parts) {
+  const out = [];
+  if (program.track !== 'alt' && parts.subjects.score === 0) {
+    out.push({
+      type: 'subjects',
+      title: 'Не та пара профильных предметов',
+      detail:
+        `Вы выбрали «${pairName(profile.pair)}», а здесь принимают с ` +
+        `${program.pairs.map(pairName).join(' или ')}. Без нужной пары заявление не примут.`,
+      fix: 'Сменить пару профильных предметов в профиле или выбрать другую программу.',
+    });
+  }
+  const need = thresholdFor(program);
+  const { score: proj } = projectedScore(profile);
+  if (program.track !== 'alt' && proj < need) {
+    out.push({
+      type: 'threshold',
+      title: `Ниже порогового балла (${need})`,
+      detail:
+        `Государство установило порог ${need} баллов для этого направления, ` +
+        `а ваш ориентир — ${proj}. Нужно добрать минимум ${points(need - proj)}.`,
+      fix: `Поднять балл до ${need} или выше.`,
+    });
+  }
+  return out;
+}
+
+// ——— Итоговая оценка одной программы ———
+
+function scoreProgram(program, profile) {
+  const chance = grantChance(program, profile);
+  const interest = interestPart(program, profile);
+  const city = cityPart(program, profile);
+  const parts = {
+    interest,
+    chance: { score: chance.score, explain: chance.explain },
+    budget: budgetPart(program, profile, chance),
+    city,
+    lang: langPart(program, profile),
+    subjects: subjectsPart(program, profile),
+  };
+
+  const total = Math.round(
+    Object.keys(WEIGHTS).reduce((acc, k) => acc + (parts[k].score * WEIGHTS[k]) / 100, 0),
+  );
+
+  const blocks = blockers(program, profile, parts);
+  const ordered = Object.keys(WEIGHTS)
+    .map((k) => ({ key: k, label: COMPONENT_LABEL[k], weight: WEIGHTS[k], ...parts[k] }))
+    .sort((a, b) => b.score * b.weight - a.score * a.weight);
+
+  return {
+    program,
+    total,
+    chance,
+    parts: ordered,
+    blockers: blocks,
+    eligible: blocks.length === 0,
+    interestTier: interest.tier,
+    cityFits: city.fits,
+    strengths: ordered.filter((p) => p.score >= 85).slice(0, 3),
+    caution: ordered.filter((p) => p.score < 60).slice(-1)[0] || null,
+    threshold: thresholdFor(program),
+  };
+}
+
+// ——— Ранжирование каталога ———
+//
+// Кейс требует минимум три рекомендации, но бывает честный конфликт: человек
+// хочет медицину, а выбрал пару «Математика — Физика», с которой на медицину
+// не принимают вообще. Выдумывать три варианта в такой ситуации нельзя.
+// Поэтому список собирается по лестнице, и каждый вариант ниже первой ступени
+// несёт честную пометку, почему он здесь.
+
+const LADDER = [
+  { id: 'a', reason: null,
+    test: (s) => s.eligible && s.interestTier === 'direct' && s.cityFits },
+  { id: 'b', reason: 'Другой город — в вашей географии прямых вариантов мало',
+    test: (s) => s.eligible && s.interestTier === 'direct' },
+  { id: 'c', reason: 'Смежное направление — прямых совпадений мало',
+    test: (s) => s.eligible && s.interestTier === 'related' },
+  { id: 'd', reason: 'Доступно по вашей паре профильных предметов, но направление другое',
+    test: (s) => s.eligible },
+  { id: 'e', reason: 'Совпадает с интересом, но нужна другая пара профильных предметов',
+    test: (s) => !s.eligible && s.interestTier === 'direct'
+      && s.blockers.every((b) => b.type === 'subjects') },
+];
+
+function rankPrograms(profile, { limit = 6 } = {}) {
+  const scored = PROGRAMS.map((p) => scoreProgram(p, profile));
+  const byTotal = (a, b) => b.total - a.total;
+  const used = new Set();
+
+  const rungs = LADDER.map((rung) => {
+    const items = scored
+      .filter((s) => !used.has(s.program.id) && rung.test(s))
+      .sort(byTotal);
+    items.forEach((s) => {
+      used.add(s.program.id);
+      s.rung = rung.id;
+      if (rung.reason) s.tierReason = rung.reason;
+    });
+    return items;
+  });
+
+  const [a, b, c, d, e] = rungs;
+  let matches = a.slice(0, limit);
+  const queue = [...b, ...c, ...d, ...e];
+  while (matches.length < 3 && queue.length) matches.push(queue.shift());
+  if (matches.length > 3) matches = matches.slice(0, Math.max(3, limit));
+
+  const shown = new Set(matches.map((m) => m.program.id));
+  const adjacent = [...b, ...c]
+    .filter((s) => !shown.has(s.program.id))
+    .slice(0, 4);
+  const blocked = scored
+    .filter((s) => !s.eligible && !shown.has(s.program.id)
+      && (s.interestTier === 'direct' || s.interestTier === 'related'))
+    .sort(byTotal)
+    .slice(0, 4);
+
+  return {
+    matches,
+    adjacent,
+    blocked,
+    counted: scored.length,
+    directFits: a.length,
+    conflict: conflictCheck(profile),
+  };
+}
+
+// Какие пары профильных предметов открывают интересы пользователя.
+function pairsUnlocking(interests = []) {
+  const counts = {};
+  PROGRAMS
+    .filter((p) => p.pairs.length && p.fields.some((f) => interests.includes(f)))
+    .forEach((p) => p.pairs.forEach((pair) => { counts[pair] = (counts[pair] || 0) + 1; }));
+  return Object.entries(counts)
+    .sort((x, y) => y[1] - x[1])
+    .map(([id, n]) => ({ id, name: pairName(id), count: n }));
+}
+
+// Конфликт «интерес против пары предметов»: самая полезная вещь, которую
+// сервис может сказать одиннадцатикласснику до регистрации на ЕНТ.
+function conflictCheck(profile) {
+  const interests = profile.interests || [];
+  if (!interests.length) return null;
+  const direct = PROGRAMS.filter((p) => p.fields.some((f) => interests.includes(f)));
+  const open = direct.filter(
+    (p) => p.track === 'alt' || p.pairs.includes(profile.pair),
+  );
+  if (open.length >= 3) return null;
+  const options = pairsUnlocking(interests).filter((o) => o.id !== profile.pair);
+  if (!options.length) return null;
+  return {
+    kind: 'pair',
+    have: pairName(profile.pair),
+    openNow: open.length,
+    options: options.slice(0, 2),
+    fields: interests.map(fieldName),
+  };
+}
+
+// ——— Диагностика профиля ———
+
+function diagnose(profile) {
+  const { score: proj, adjusted } = projectedScore(profile);
+  const strengths = [];
+  const limits = [];
+
+  if (proj >= 115) strengths.push('Балл в зоне самых конкурентных грантов');
+  else if (proj >= 95) strengths.push('Балл позволяет бороться за гранты в сильных вузах');
+  else if (proj >= 75) strengths.push('Балл открывает гранты в региональных и профильных вузах');
+  else limits.push('Балла пока не хватает для большинства грантов — это приоритет номер один');
+
+  if ((profile.langs || []).includes('en')) {
+    strengths.push('Английский открывает программы на английском языке');
+  } else {
+    limits.push('Без английского закрыты КБТУ, КИМЭП, SDU и часть программ AITU');
+  }
+  if (profile.gpa === 'top' || profile.gpa === 'good') {
+    strengths.push('Хорошая успеваемость — плюс при равных баллах и для «Алтын белгі»');
+  }
+  if (adjusted !== 0) {
+    strengths.push(
+      `Ориентир скорректирован на ${adjusted > 0 ? '+' : ''}${adjusted} с учётом успеваемости`,
+    );
+  }
+
+  if (profile.mobility === 'home') {
+    limits.push(`Только ${cityName(profile.city)} — это отсекает большую часть каталога`);
+  }
+  if (profile.budget === 'grant') {
+    limits.push('Расчёт только на грант — платные варианты не подстрахуют');
+  }
+  if ((profile.interests || []).length > 3) {
+    limits.push('Выбрано много направлений сразу — стоит сузить до двух');
+  }
+  if (!limits.length) {
+    limits.push(
+      'Проходные баллы меняются каждый год, поэтому запас в 5–7 баллов обязателен',
+    );
+  }
+
+  return {
+    projected: proj,
+    adjusted,
+    strengths: strengths.slice(0, 4),
+    limits: limits.slice(0, 3),
+    goal: buildGoal(profile, proj),
+  };
+}
+
+function buildGoal(profile, proj) {
+  const acc = (profile.interests || []).map(fieldAcc);
+  const subject = acc.length ? acc.slice(0, 2).join(' и ') : 'выбранное направление';
+  const where =
+    profile.mobility === 'home'
+      ? `в ${cityName(profile.city)}`
+      : profile.mobility === 'majors'
+        ? 'в Алматы или Астане'
+        : 'в любом городе Казахстана';
+  const money =
+    profile.budget === 'grant' ? 'на гранте' : 'на гранте или платно в рамках бюджета';
+  return `Поступить на ${subject} ${where} ${money}. Ориентир по ЕНТ — ${points(proj)}.`;
+}
+
+/* ===== src/lib/plan.js ===== */
+// Генератор маршрута поступления.
+//
+// Календарь построен по фактическому циклу ЕНТ-2026 (источник — НЦТ) и сдвинут
+// на кампанию 2027 года. Официальные даты 2027 на момент сборки не объявлены,
+// поэтому все календарные шаги помечены как ориентировочные.
+
+
+
+const CALENDAR_NOTE =
+  'Даты приведены по циклу ЕНТ-2026: регистрация на основное ЕНТ шла с 11 по 25 апреля, ' +
+  'само тестирование — с 10 мая по 10 июля. Даты кампании 2027 года официально ещё ' +
+  'не объявлены, поэтому проверяйте их на testcenter.kz.';
+
+const CATEGORIES = {
+  academic: { name: 'Учёба и подготовка' },
+  exam: { name: 'Экзамены' },
+  docs: { name: 'Документы' },
+  deadline: { name: 'Дедлайн' },
+  activity: { name: 'Активности' },
+};
+
+const T = (o) => ({ demo: false, ...o });
+
+function buildPlan(profile, target) {
+  const { score: proj } = projectedScore(profile);
+  const program = target ? target.program : null;
+  const gap = program && program.cutoff ? program.cutoff - proj : 0;
+  const needsPoints = gap > 0;
+  const steps = [];
+
+  // ——— Осень 2026: определиться и измерить стартовую точку ———
+  steps.push(T({
+    id: 'narrow',
+    when: 'Сентябрь — октябрь 2026',
+    cat: 'academic',
+    title: 'Сузить выбор до трёх групп программ',
+    detail:
+      (profile.interests || []).length > 2
+        ? 'Вы выбрали больше двух направлений. Оставьте три программы из списка ' +
+          'рекомендаций: одну целевую, одну реалистичную и одну запасную.'
+        : 'Возьмите три программы из рекомендаций: целевую, реалистичную и запасную. ' +
+          'Конкурс на грант идёт на группу программ, а не на конкретную специальность.',
+  }));
+
+  steps.push(T({
+    id: 'diagnostic',
+    when: 'Октябрь 2026',
+    cat: 'academic',
+    title: 'Пройти пробный тест по своей паре предметов',
+    detail:
+      `Пробные тесты есть на сайте НЦТ. Сдайте полный вариант по паре ` +
+      `«${pairName(profile.pair)}» и зафиксируйте реальный балл — дальше вся ` +
+      'подготовка строится от него, а не от ощущений.',
+    source: { label: 'Пробные тесты НЦТ', url: 'https://testcenter.kz/' },
+  }));
+
+  if (needsPoints) {
+    steps.push(T({
+      id: 'prep-gap',
+      when: 'Октябрь 2026 — март 2027',
+      cat: 'academic',
+      title: `Добрать ${gap} баллов до проходного`,
+      detail:
+        `Проходной балл вашей целевой программы — ${program.cutoff}, ваш ориентир — ${proj}. ` +
+        `Разрыв ${gap} баллов. Профильные предметы весят больше всего: сосредоточьтесь на ` +
+        `${pairName(profile.pair).toLowerCase()} и разбирайте ошибки после каждого пробного теста.`,
+      demo: true,
+    }));
+  } else {
+    steps.push(T({
+      id: 'prep-hold',
+      when: 'Октябрь 2026 — март 2027',
+      cat: 'academic',
+      title: 'Удержать балл и подстраховать запасные варианты',
+      detail:
+        `Ваш ориентир ${proj} уже выше проходного балла целевой программы. ` +
+        'Задача — не потерять форму: один полный пробный тест в месяц и разбор ошибок. ' +
+        'Разрыв в 5–7 баллов легко теряется на невнимательности.',
+    }));
+  }
+
+  // ——— Языковые и творческие требования ———
+  if (program && program.langs.length === 1 && program.langs[0] === 'en'
+      && !(profile.langs || []).includes('en')) {
+    steps.push(T({
+      id: 'english',
+      when: 'Ноябрь 2026 — май 2027',
+      cat: 'academic',
+      title: 'Подтянуть английский до уровня обучения',
+      detail:
+        `${program.short} учит только на английском, а вы его не указали. ` +
+        'Уточните в приёмной комиссии, нужен ли сертификат IELTS и какой балл, ' +
+        'и начинайте заранее — это не решается за месяц.',
+    }));
+  }
+
+  if (program && program.pairs.includes('creative')) {
+    steps.push(T({
+      id: 'creative',
+      when: 'Декабрь 2026 — май 2027',
+      cat: 'exam',
+      title: 'Готовить портфолио к творческому экзамену',
+      detail:
+        `На «${program.name}» отбор идёт через творческий экзамен. Он проходит в самом ` +
+        'вузе, даты и требования к работам публикует приёмная комиссия — запросите их ' +
+        'в декабре, а не в мае.',
+      source: { label: `Приёмная комиссия ${program.short}`, url: program.site },
+    }));
+  }
+
+  // ——— Зимняя и весенняя попытки ———
+  steps.push(T({
+    id: 'reg-jan',
+    when: '20 — 30 декабря 2026',
+    cat: 'deadline',
+    title: 'Зарегистрироваться на январское ЕНТ',
+    detail:
+      'Январское, мартовское и августовское ЕНТ дают поступление только на платное, ' +
+      'но это лучшая тренировка в реальных условиях. Регистрация — на app.testcenter.kz ' +
+      'или в приложении UTO.',
+    source: { label: 'НЦТ: сроки регистрации', url: 'https://testcenter.kz/' },
+    demo: true,
+  }));
+
+  steps.push(T({
+    id: 'jan-ent',
+    when: 'Январь 2027',
+    cat: 'exam',
+    title: 'Сдать январское ЕНТ как репетицию',
+    detail:
+      'Формат: три обязательных предмета плюс два профильных, 4 часа. ' +
+      'После теста вы получите тематический анализ — он точно покажет, какие темы проваливаются.',
+  }));
+
+  steps.push(T({
+    id: 'analysis',
+    when: 'Февраль 2027',
+    cat: 'academic',
+    title: 'Разобрать тематический анализ января',
+    detail:
+      'Возьмите отчёт по темам и выпишите пять самых слабых. Следующие два месяца ' +
+      'подготовки — только по ним. Это самый дешёвый способ добрать баллы.',
+  }));
+
+  steps.push(T({
+    id: 'mar-ent',
+    when: 'Март 2027',
+    cat: 'exam',
+    title: 'Мартовское ЕНТ — контрольный замер',
+    detail:
+      'Вторая тренировочная попытка. Если балл не вырос, до основного ЕНТ остаётся ' +
+      'два месяца — этого достаточно, чтобы изменить способ подготовки, но не сам план.',
+  }));
+
+  // ——— Основная кампания ———
+  steps.push(T({
+    id: 'reg-main',
+    when: '11 — 25 апреля 2027',
+    cat: 'deadline',
+    title: 'Регистрация на основное ЕНТ',
+    detail:
+      'Здесь вы выбираете дату, время, пункт тестирования и пару профильных предметов — ' +
+      `в вашем случае «${pairName(profile.pair)}». С 11 по 16 апреля заявление можно подать ` +
+      'один раз, с 17 по 25 апреля — второй. Это вход в конкурс на грант.',
+    source: { label: 'НЦТ: основное ЕНТ', url: 'https://testcenter.kz/' },
+    demo: true,
+  }));
+
+  steps.push(T({
+    id: 'main-ent',
+    when: 'Май — июль 2027',
+    cat: 'exam',
+    title: 'Основное ЕНТ, до двух попыток',
+    detail:
+      'В конкурс на грант идёт лучший результат из двух попыток. Первую попытку лучше ' +
+      'ставить раньше, чтобы осталось время на вторую.',
+    source: { label: 'НЦТ', url: 'https://testcenter.kz/' },
+    demo: true,
+  }));
+
+  steps.push(T({
+    id: 'docs',
+    when: 'Июнь 2027',
+    cat: 'docs',
+    title: 'Собрать пакет документов',
+    detail:
+      'Аттестат, удостоверение личности, медицинская справка 086-У, фотографии 3×4, ' +
+      'сертификат ЕНТ. Точный список каждый вуз публикует у себя — сверьтесь с ним заранее.',
+    source: program
+      ? { label: `Приёмная комиссия ${program.short}`, url: program.site }
+      : null,
+  }));
+
+  steps.push(T({
+    id: 'grant-apply',
+    when: 'Июль 2027',
+    cat: 'deadline',
+    title: 'Подать заявление на конкурс грантов',
+    detail:
+      'Заявление подаётся через eGov или напрямую в приёмную комиссию. В нём указываются ' +
+      'группы программ по приоритету — порядок важен, потому что конкурс идёт сверху вниз.',
+    source: { label: 'eGov: конкурс грантов', url: 'https://egov.kz/' },
+    demo: true,
+  }));
+
+  if (profile.budget === 'grant') {
+    steps.push(T({
+      id: 'plan-b',
+      when: 'Июль 2027',
+      cat: 'docs',
+      title: 'Подготовить план Б без гранта',
+      detail:
+        'Вы рассчитываете только на грант, поэтому нужен второй сценарий: программы с ' +
+        'проходным баллом на 10–15 ниже, региональные вузы, августовское ЕНТ для платного ' +
+        'приёма или колледж с переходом в вуз.',
+    }));
+  }
+
+  steps.push(T({
+    id: 'enroll',
+    when: 'Август 2027',
+    cat: 'docs',
+    title: 'Зачисление и договор',
+    detail:
+      program
+        ? `Если грант получен — подписываете договор в ${program.short} и подаёте на общежитие. ` +
+          'Если нет — августовское ЕНТ даёт ещё одну попытку для платного приёма.'
+        : 'Подписание договора, заявление на общежитие. При неудаче — августовское ЕНТ ' +
+          'для платного приёма.',
+  }));
+
+  // ——— Активности, усиливающие заявку ———
+  steps.push(T({
+    id: 'olympiad',
+    when: 'Ноябрь 2026 — февраль 2027',
+    cat: 'activity',
+    title: 'Заявиться на предметную олимпиаду',
+    detail:
+      `Олимпиады по ${pairName(profile.pair).toLowerCase()} дают преимущество при равных ` +
+      'баллах, а у призёров республиканского уровня появляется отдельный путь к гранту. ' +
+      'Регистрация идёт через школу.',
+  }));
+
+  if (profile.gpa === 'top') {
+    steps.push(T({
+      id: 'altyn',
+      when: 'Весь учебный год',
+      cat: 'activity',
+      title: 'Удержать «Алтын белгі»',
+      detail:
+        'При ваших оценках знак достижим, а он даёт преимущество в конкурсе на грант. ' +
+        'Условия уточните у классного руководителя — они зависят от всех лет обучения.',
+    }));
+  }
+
+  steps.push(T({
+    id: 'visit',
+    when: 'Февраль — апрель 2027',
+    cat: 'activity',
+    title: 'Съездить на день открытых дверей',
+    detail:
+      program
+        ? `Посмотрите ${program.short} в ${cityName(program.city)} живьём и задайте приёмной ` +
+          'комиссии два вопроса: сколько грантов было в прошлом году и какой был проходной балл.'
+        : 'Дни открытых дверей — самый быстрый способ получить настоящие цифры по грантам.',
+    source: program ? { label: program.site.replace('https://', ''), url: program.site } : null,
+  }));
+
+  return steps;
+}
+
+// Ближайший невыполненный шаг — то, что показывается как «следующее действие».
+function nextStep(steps, done) {
+  return steps.find((s) => !done[s.id]) || null;
+}
+
+function planProgress(steps, done) {
+  const total = steps.length;
+  const complete = steps.filter((s) => done[s.id]).length;
+  return { total, complete, pct: total ? Math.round((complete / total) * 100) : 0 };
+}
+
+function thresholdLabel(program) {
+  return `Пороговый балл направления: ${thresholdFor(program)}`;
+}
+
+/* ===== src/lib/store.js ===== */
+// Состояние приложения. Хранится в localStorage, поэтому маршрут не теряется
+// при перезагрузке. Бэкенда нет: это осознанный выбор для демонстрации —
+// весь полный путь работает локально и не зависит от внешних сервисов.
+
+const KEY = 'bagyt.v1';
+
+const EMPTY_PROFILE = {
+  grade: '11',
+  interests: [],
+  gpa: 'good',
+  entScore: 95,
+  entKnown: 'expected',
+  pair: 'math_phys',
+  langs: ['ru'],
+  city: 'almaty',
+  mobility: 'majors',
+  budget: 'to2',
+  priorities: ['grant'],
+};
+
+const EMPTY_STATE = {
+  screen: 'intro',
+  profileStep: 0,
+  profile: { ...EMPTY_PROFILE },
+  completed: false,
+  targetId: null,
+  compareIds: [],
+  saved: [],
+  done: {},
+  snapshot: null, // предыдущий результат подбора — для показа изменений
+  changes: null,
+};
+
+function read() {
+  try {
+    const raw = localStorage.getItem(KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return { ...EMPTY_STATE, ...parsed, profile: { ...EMPTY_PROFILE, ...parsed.profile } };
+  } catch {
+    return null;
+  }
+}
+
+function write(state) {
+  try {
+    localStorage.setItem(KEY, JSON.stringify(state));
+    return true;
+  } catch {
+    // Приватный режим браузера или заполненное хранилище — приложение
+    // продолжает работать в памяти, просто без сохранения между сессиями.
+    return false;
+  }
+}
+
+function createStore() {
+  let state = read() || { ...EMPTY_STATE };
+  let persisted = true;
+  const listeners = new Set();
+
+  const notify = () => listeners.forEach((fn) => fn(state));
+
+  return {
+    get state() {
+      return state;
+    },
+    get persisted() {
+      return persisted;
+    },
+    subscribe(fn) {
+      listeners.add(fn);
+      return () => listeners.delete(fn);
+    },
+    set(patch) {
+      state = { ...state, ...patch };
+      persisted = write(state);
+      notify();
+    },
+    setProfile(patch) {
+      state = { ...state, profile: { ...state.profile, ...patch } };
+      persisted = write(state);
+      notify();
+    },
+    toggleIn(key, value, max = Infinity) {
+      const list = state[key] || [];
+      const next = list.includes(value)
+        ? list.filter((v) => v !== value)
+        : [...list, value].slice(-max);
+      this.set({ [key]: next });
+    },
+    toggleProfileList(key, value, max = Infinity) {
+      const list = state.profile[key] || [];
+      const next = list.includes(value)
+        ? list.filter((v) => v !== value)
+        : [...list, value].slice(-max);
+      this.setProfile({ [key]: next });
+    },
+    toggleDone(id) {
+      const done = { ...state.done };
+      if (done[id]) delete done[id];
+      else done[id] = true;
+      this.set({ done });
+    },
+    reset() {
+      state = { ...EMPTY_STATE, profile: { ...EMPTY_PROFILE } };
+      try {
+        localStorage.removeItem(KEY);
+      } catch { /* ignore */ }
+      notify();
+    },
+  };
+}
+
+// ——— Что изменилось после правки профиля ———
+// Жюри по сценарию проверки меняет бюджет, интерес, страну или экзамен.
+// Сервис обязан не просто пересчитать, а показать, что именно сдвинулось.
+
+function snapshotOf(result) {
+  return {
+    ids: result.matches.map((m) => m.program.id),
+    top: result.matches[0]
+      ? { id: result.matches[0].program.id, total: result.matches[0].total }
+      : null,
+    chances: Object.fromEntries(
+      result.matches.map((m) => [m.program.id, m.chance.level]),
+    ),
+  };
+}
+
+const CHANCE_RANK = { unlikely: 0, low: 1, border: 2, good: 3, high: 4, separate: 2 };
+
+function diffResult(prev, result) {
+  if (!prev) return null;
+  const snap = snapshotOf(result);
+  const added = result.matches.filter((m) => !prev.ids.includes(m.program.id));
+  const removed = prev.ids.filter((id) => !snap.ids.includes(id));
+  const lines = [];
+
+  if (added.length) {
+    lines.push(
+      `Появилось в списке: ${added.map((m) => `${m.program.short} — ${m.program.name}`).join('; ')}`,
+    );
+  }
+  if (removed.length) {
+    lines.push(`Ушло из списка: ${removed.length} вариант(а)`);
+  }
+  if (snap.top && prev.top && snap.top.id !== prev.top.id) {
+    const nowTop = result.matches[0];
+    lines.push(`Новый лучший вариант: ${nowTop.program.short}, соответствие ${nowTop.total}%`);
+  } else if (snap.top && prev.top && snap.top.total !== prev.top.total) {
+    const d = snap.top.total - prev.top.total;
+    lines.push(`Соответствие лучшего варианта ${d > 0 ? 'выросло' : 'упало'} на ${Math.abs(d)}%`);
+  }
+
+  const shifted = Object.keys(snap.chances).filter(
+    (id) => prev.chances[id] && prev.chances[id] !== snap.chances[id],
+  );
+  if (shifted.length) {
+    const up = shifted.filter(
+      (id) => CHANCE_RANK[snap.chances[id]] > CHANCE_RANK[prev.chances[id]],
+    ).length;
+    const down = shifted.length - up;
+    const parts = [];
+    if (up) parts.push(`выросли у ${up}`);
+    if (down) parts.push(`упали у ${down}`);
+    lines.push(`Шансы на грант ${parts.join(', ')} программ`);
+  }
+
+  if (!lines.length) return null;
+  return { lines, snapshot: snap };
+}
+
+/* ===== src/ui/screens.js ===== */
+// Отрисовка экранов. Каждая функция возвращает строку HTML, а обработка
+// событий целиком построена на делегировании по data-act — поэтому любое
+// изменение профиля перерисовывает весь путь и ничего не рассыпается.
+
+
+
+
+
+const esc = (s) =>
+  String(s).replace(/[&<>"']/g, (c) =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+const STATIONS = [
+  { id: 'profile', label: 'Профиль' },
+  { id: 'diagnosis', label: 'Диагностика' },
+  { id: 'matches', label: 'Рекомендации' },
+  { id: 'compare', label: 'Сравнение' },
+  { id: 'roadmap', label: 'Маршрут' },
+];
+
+const CHANCE_CHIP = {
+  high: 'chip--good', good: 'chip--good', border: 'chip--grant',
+  low: 'chip--risk', unlikely: 'chip--risk', separate: 'chip--route',
+};
+
+const demoChip = (title = 'Демонстрационные данные') =>
+  `<span class="chip chip--demo" title="${esc(title)}">демо</span>`;
+
+// ——— шапка со станциями ———
+
+function topbar(state) {
+  const order = STATIONS.map((s) => s.id);
+  const nowIdx = order.indexOf(state.screen);
+  const stations = STATIONS.map((s, i) => {
+    const cls = i < nowIdx ? 'is-done' : i === nowIdx ? 'is-now' : '';
+    const reachable = state.completed || i <= nowIdx;
+    return `<div class="station ${cls}">
+      ${i ? '<span class="station__rail"></span>' : ''}
+      <span class="station__dot"></span>
+      <button class="station__label" data-act="${reachable ? 'goto' : 'noop'}" data-v="${s.id}"
+        ${reachable ? '' : 'disabled'} style="background:none;border:0;cursor:${reachable ? 'pointer' : 'default'}">${s.label}</button>
+    </div>`;
+  }).join('');
+
+  const back = state.screen !== 'intro'
+    ? `<button class="iconbtn" data-act="back" aria-label="Назад">←</button>`
+    : '';
+
+  return `<header class="topbar">
+    <div class="topbar__row">
+      ${back}
+      <div class="brand">Bagyt<span>.</span></div>
+      <div class="topbar__stage">${state.screen === 'intro' ? 'Начало' : `Этап ${nowIdx + 1} из 5`}</div>
+    </div>
+    ${state.screen === 'intro' ? '' : `<nav class="stations" aria-label="Этапы">${stations}</nav>`}
+  </header>`;
+}
+
+function rail(state) {
+  const order = STATIONS.map((s) => s.id);
+  const nowIdx = order.indexOf(state.screen);
+  const stations = STATIONS.map((s, i) => {
+    const cls = i < nowIdx ? 'is-done' : i === nowIdx ? 'is-now' : '';
+    const reachable = state.completed || i <= nowIdx;
+    return `<div class="station ${cls}">
+      <span class="station__dot"></span>
+      <button class="station__label" data-act="${reachable ? 'goto' : 'noop'}" data-v="${s.id}"
+        ${reachable ? '' : 'disabled'} style="background:none;border:0;cursor:pointer;text-align:left">${s.label}</button>
+    </div>`;
+  }).join('');
+  return `<aside class="rail">
+    <div class="tiny" style="margin-bottom:12px">Ваш маршрут</div>
+    <nav class="stations" aria-label="Этапы">${stations}</nav>
+    <div class="tiny" style="margin-top:20px">${state.completed ? 'Можно вернуться к любому этапу' : 'Этапы откроются по мере заполнения'}</div>
+  </aside>`;
+}
+
+// ——— 1. Вход ———
+
+function intro() {
+  return `<div class="stack-lg">
+    <div class="stack">
+      <span class="chip chip--route">Для 11 класса · Казахстан · бакалавриат</span>
+      <h1 class="h1">Не список вузов,<br>а ваш маршрут поступления</h1>
+      <p class="lead">Семь минут на анкету — и вы получите три программы, которые подходят
+      именно вашему баллу, бюджету и паре профильных предметов, с объяснением каждого выбора
+      и планом действий до августа 2027 года.</p>
+    </div>
+
+    <div class="facts">
+      <div class="fact"><span class="fact__k">Что на входе</span><span class="fact__v">Класс, интересы, ожидаемый балл ЕНТ, языки, город, бюджет</span></div>
+      <div class="fact"><span class="fact__k">Что на выходе</span><span class="fact__v">Рекомендации с объяснением, сравнение и пошаговый план с датами</span></div>
+      <div class="fact"><span class="fact__k">Как считаем</span><span class="fact__v">Шесть проверяемых критериев, без «магии» — вы видите вклад каждого</span></div>
+    </div>
+
+    <button class="btn" data-act="start">Заполнить анкету</button>
+
+    <p class="note">Сервис учитывает формальные правила приёма: пару профильных предметов
+    ЕНТ и пороговые баллы направлений. Проходные баллы и стоимость обучения —
+    демонстрационные ориентиры, они помечены значком «демо» и требуют проверки на сайте вуза.</p>
+  </div>`;
+}
+
+// ——— 2. Профиль ———
+
+const PROFILE_STEPS = [
+  { key: 'grade', title: 'В каком вы классе?', hint: 'От этого зависит, с какого месяца начинается ваш маршрут.' },
+  { key: 'interests', title: 'Что вам интересно?', hint: 'Выберите до трёх направлений. Чем точнее, тем осмысленнее подбор.' },
+  { key: 'ent', title: 'На какой балл ЕНТ рассчитываете?', hint: `Максимум — ${ENT_MAX}. Если ещё не сдавали, поставьте честную оценку: мы скорректируем её по успеваемости.` },
+  { key: 'pair', title: 'Какую пару профильных предметов выберете?', hint: 'Это самое жёсткое ограничение: пара определяет, какие программы вам вообще доступны.' },
+  { key: 'langs', title: 'На каких языках готовы учиться?', hint: 'Отметьте все подходящие.' },
+  { key: 'geo', title: 'Где вы готовы учиться?', hint: 'Переезд открывает заметно больше вариантов.' },
+  { key: 'money', title: 'Какой бюджет на обучение?', hint: 'И что для вас важнее всего при выборе.' },
+];
+
+const PROFILE_TOTAL = PROFILE_STEPS.length;
+
+function choice(act, value, on, label, opts = {}) {
+  return `<button class="choice ${opts.box ? 'choice--box' : ''} ${on ? 'is-on' : ''}"
+    data-act="${act}" data-v="${esc(value)}" aria-pressed="${on}">
+    <span class="choice__mark"></span>
+    ${opts.icon ? `<span class="choice__ico">${opts.icon}</span>` : ''}
+    <span>${label}</span>
+  </button>`;
+}
+
+function profileScreen(state) {
+  const i = state.profileStep;
+  const step = PROFILE_STEPS[i];
+  const p = state.profile;
+  const editing = !!state.editing;
+  let body = '';
+
+  if (step.key === 'grade') {
+    body = `<div class="choices">${GRADES.map((g) =>
+      choice('set:grade', g.id, p.grade === g.id, g.name)).join('')}</div>`;
+  }
+
+  if (step.key === 'interests') {
+    body = `<div class="choices">${FIELDS.map((f) =>
+      choice('toggle:interests', f.id, p.interests.includes(f.id), f.name, { box: true, icon: f.icon }),
+    ).join('')}</div>
+    <p class="tiny mt-s">Выбрано: ${p.interests.length} из 3${p.interests.length >= 3 ? ' — лимит достигнут, новый выбор заменит самый старый' : ''}</p>`;
+  }
+
+  if (step.key === 'ent') {
+    const { score, adjusted } = projectedScore(p);
+    body = `<div class="card card--flat">
+      <div class="scorebox">${p.entScore}<small>из ${ENT_MAX}</small></div>
+      <input class="slider" type="range" min="30" max="${ENT_MAX}" step="1"
+        value="${p.entScore}" data-act="range:entScore" aria-label="Балл ЕНТ">
+      <div class="tiny">Порог для национальных вузов — 65, для права и педагогики — 75, для медицины — 70.</div>
+    </div>
+    <div class="choices choices--2 mt-s">
+      ${choice('set:entKnown', 'expected', p.entKnown === 'expected', 'Пока ожидаю')}
+      ${choice('set:entKnown', 'actual', p.entKnown === 'actual', 'Уже сдавал')}
+    </div>
+    <div class="h3 mt-s" style="margin-top:18px">Успеваемость в школе</div>
+    <div class="choices mt-s">${GPA_LEVELS.map((g) =>
+      choice('set:gpa', g.id, p.gpa === g.id, g.name)).join('')}</div>
+    ${p.entKnown === 'expected'
+      ? `<p class="note mt-s">Расчётный ориентир: <b>${score}</b> ${adjusted === 0 ? '— без корректировки' : `(${adjusted > 0 ? '+' : ''}${adjusted} за успеваемость)`}. Именно он сравнивается с проходными баллами.</p>`
+      : `<p class="note mt-s">Балл уже сдан, поэтому корректировка по успеваемости не применяется: сравниваем с <b>${score}</b>.</p>`}`;
+  }
+
+  if (step.key === 'pair') {
+    body = `<div class="choices">${SUBJECT_PAIRS.map((s) =>
+      choice('set:pair', s.id, p.pair === s.id, s.name)).join('')}</div>
+    <p class="note mt-s">Три обязательных предмета — история Казахстана, грамотность чтения
+    и математическая грамотность — сдают все. Пара профильных предметов выбирается
+    при регистрации на ЕНТ и жёстко определяет доступные группы программ.</p>`;
+  }
+
+  if (step.key === 'langs') {
+    body = `<div class="choices">${LANGS.map((l) =>
+      choice('toggle:langs', l.id, p.langs.includes(l.id), l.name, { box: true })).join('')}</div>
+    ${!p.langs.length ? '<p class="note note--warn mt-s">Выберите хотя бы один язык, иначе подбор не сможет отсечь неподходящие программы.</p>' : ''}`;
+  }
+
+  if (step.key === 'geo') {
+    body = `<div class="h3">Ваш город</div>
+    <div class="choices choices--2 mt-s">${CITIES.map((c) =>
+      choice('set:city', c.id, p.city === c.id, c.name)).join('')}</div>
+    <div class="h3" style="margin-top:18px">Готовность к переезду</div>
+    <div class="choices mt-s">${MOBILITY.map((m) =>
+      choice('set:mobility', m.id, p.mobility === m.id, m.name)).join('')}</div>`;
+  }
+
+  if (step.key === 'money') {
+    body = `<div class="choices">${BUDGETS.map((b) =>
+      choice('set:budget', b.id, p.budget === b.id, b.name)).join('')}</div>
+    <div class="h3" style="margin-top:18px">Что важнее всего</div>
+    <p class="tiny">До двух пунктов. Они подсветятся в сравнении вариантов.</p>
+    <div class="choices choices--2 mt-s">${PRIORITIES.map((x) =>
+      choice('toggle:priorities', x.id, p.priorities.includes(x.id), x.name, { box: true })).join('')}</div>`;
+  }
+
+  const blocked = step.key === 'langs' && !p.langs.length
+    || step.key === 'interests' && !p.interests.length;
+
+  const nav = editing
+    ? `<div class="btn-row">
+         <button class="btn btn--ghost" data-act="cancelEdit">Отменить</button>
+         <button class="btn" data-act="saveEdit" ${blocked ? 'disabled' : ''}>Сохранить и пересчитать</button>
+       </div>`
+    : `<button class="btn" data-act="next" ${blocked ? 'disabled' : ''}>
+         ${i === PROFILE_TOTAL - 1 ? 'Показать диагностику' : 'Далее'}
+       </button>`;
+
+  return `<div class="stack-lg">
+    <div class="stack">
+      ${editing ? '<span class="chip chip--route">Правка ответа</span>' : `<div class="tiny">Вопрос ${i + 1} из ${PROFILE_TOTAL}</div>`}
+      <h2 class="h1" style="font-size:clamp(21px,5.2vw,26px)">${step.title}</h2>
+      <p class="small">${step.hint}</p>
+    </div>
+    <div>${body}</div>
+    ${nav}
+  </div>`;
+}
+
+// ——— 3. Диагностика ———
+
+function diagnosisScreen(state, diag, result) {
+  const p = state.profile;
+  return `<div class="stack-lg">
+    <div class="stack">
+      <div class="tiny">Этап 2 — диагностика</div>
+      <h2 class="h1" style="font-size:clamp(22px,5.4vw,28px)">Вот как выглядит ваш профиль</h2>
+      <p class="note note--change"><b>Ваша цель:</b> ${esc(diag.goal)}</p>
+    </div>
+
+    <div class="facts">
+      <div class="fact"><span class="fact__k">Ориентир ЕНТ</span><span class="fact__v">${diag.projected} из ${ENT_MAX}${diag.adjusted ? ` <span class="tiny">(${diag.adjusted > 0 ? '+' : ''}${diag.adjusted} за успеваемость)</span>` : ''}</span></div>
+      <div class="fact"><span class="fact__k">Профильные</span><span class="fact__v">${pairName(p.pair)}</span></div>
+      <div class="fact"><span class="fact__k">Интересы</span><span class="fact__v">${p.interests.map(fieldName).join(', ') || '—'}</span></div>
+      <div class="fact"><span class="fact__k">Языки</span><span class="fact__v">${p.langs.map(langName).join(', ')}</span></div>
+      <div class="fact"><span class="fact__k">География</span><span class="fact__v">${cityName(p.city)} · ${MOBILITY.find((m) => m.id === p.mobility).name.toLowerCase()}</span></div>
+      <div class="fact"><span class="fact__k">Бюджет</span><span class="fact__v">${budgetById(p.budget).name}</span></div>
+    </div>
+
+    <div class="card stack">
+      <div class="h3">Сильные стороны</div>
+      <ul class="bullets">${diag.strengths.map((s) =>
+        `<li class="bullet bullet--plus"><span class="bullet__m">+</span><span>${esc(s)}</span></li>`).join('')}</ul>
+      <div class="h3" style="margin-top:6px">Ограничения</div>
+      <ul class="bullets">${diag.limits.map((s) =>
+        `<li class="bullet bullet--minus"><span class="bullet__m">!</span><span>${esc(s)}</span></li>`).join('')}</ul>
+    </div>
+
+    <div class="card card--flat">
+      <div class="h3">Что нашлось в каталоге</div>
+      <p class="small mt-s">Из ${result.counted} программ формальным требованиям и вашим интересам
+      соответствуют <b>${result.matches.length}</b>. Ещё ${result.adjacent.length} —
+      смежные варианты, и ${result.blocked.length} закрыты формально: мы покажем, чем именно.</p>
+    </div>
+
+    <button class="btn" data-act="goto" data-v="matches">Смотреть рекомендации</button>
+  </div>`;
+}
+
+// ——— 4. Рекомендации ———
+
+function segbar(parts) {
+  const totalW = Object.values(WEIGHTS).reduce((a, b) => a + b, 0);
+  return `<div class="segbar" aria-hidden="true">${parts.map((p) => {
+    const weak = p.score < 40 ? 1 : 0;
+    const mid = !weak && p.score < 80 ? 1 : 0;
+    return `<div class="segbar__seg" style="flex:${p.weight / totalW}" data-weak="${weak}" data-mid="${mid}"
+      title="${esc(p.label)}: ${p.score} из 100, вес ${p.weight}%">
+      <div class="segbar__fill" style="width:${p.score}%"></div></div>`;
+  }).join('')}</div>`;
+}
+
+function matchCard(m, idx, state) {
+  const pr = m.program;
+  const isTarget = state.targetId === pr.id;
+  const inCompare = state.compareIds.includes(pr.id);
+  const top2 = m.strengths.slice(0, 2);
+  return `<article class="card ${isTarget ? 'card--target' : ''} stack">
+    <div class="card__head">
+      <span class="rank">${idx + 1}</span>
+      <div>
+        <div class="card__uni">${esc(pr.short)} · ${cityName(pr.city)}${pr.gop ? ` · ${pr.gop}` : ''}</div>
+        <div class="card__name">${esc(pr.name)}</div>
+      </div>
+      <div class="card__score"><b>${m.total}%</b><span>соответствие</span></div>
+    </div>
+
+    ${segbar(m.parts)}
+
+    <div class="chips" style="margin-top:12px">
+      <span class="chip ${CHANCE_CHIP[m.chance.level]}">${m.chance.label}</span>
+      <span class="chip chip--grant">${GRANT_SEATS_LABEL[pr.grantSeats]}</span>
+      <span class="chip">${fmtMoney(pr.tuition)}</span>
+      ${demoChip('Проходной балл и стоимость — демонстрационные данные')}
+      ${isTarget ? '<span class="chip chip--route">Целевая программа</span>' : ''}
+      ${m.tierReason ? `<span class="chip chip--grant">${esc(m.tierReason)}</span>` : ''}
+    </div>
+
+    <div class="reasons">
+      ${top2.map((s) => `<div class="reason">
+        <span class="reason__key">${esc(s.label)}</span>
+        <span class="reason__txt">${esc(s.explain)}</span></div>`).join('')}
+      ${m.caution ? `<div class="reason">
+        <span class="reason__key" style="color:var(--grant)">Учтите</span>
+        <span class="reason__txt">${esc(m.caution.explain)}</span></div>` : ''}
+    </div>
+
+    <div class="btn-row" style="margin-top:4px">
+      <button class="btn btn--ghost btn--slim" data-act="open" data-v="${pr.id}">Почему подходит</button>
+      <button class="btn btn--ghost btn--slim" data-act="compare" data-v="${pr.id}">
+        ${inCompare ? 'В сравнении ✓' : 'Сравнить'}</button>
+      <button class="btn btn--slim" data-act="target" data-v="${pr.id}">
+        ${isTarget ? 'Выбрано' : 'Выбрать'}</button>
+    </div>
+  </article>`;
+}
+
+const QUICK_EDITS = [
+  { step: 2, label: 'Балл ЕНТ', get: (p) => String(projectedScore(p).score) },
+  { step: 6, label: 'Бюджет', get: (p) => budgetById(p.budget).name },
+  { step: 1, label: 'Интересы', get: (p) => p.interests.map(fieldName).join(', ') || '—' },
+  { step: 3, label: 'Профильные', get: (p) => pairName(p.pair) },
+  { step: 5, label: 'География', get: (p) => cityName(p.city) },
+];
+
+function matchesScreen(state, result) {
+  const p = state.profile;
+  const quick = QUICK_EDITS.map((q) =>
+    `<button class="check" data-act="edit" data-v="${q.step}">
+      <span style="color:var(--ink-3);font-weight:500">${q.label}:</span> ${esc(q.get(p))} ✎
+    </button>`).join('');
+
+  const changes = state.changes
+    ? `<div class="note note--change"><b>Ответ изменён — вот что стало другим:</b><br>
+        ${state.changes.lines.map(esc).join('<br>')}</div>`
+    : '';
+
+  const c = result.conflict;
+  const conflict = c
+    ? `<div class="note note--warn">
+        <b>Ваша пара предметов не сочетается с выбранным направлением.</b><br>
+        С парой «${esc(c.have)}» вам открыто ${c.openNow === 0 ? 'ни одной программы' : `всего ${c.openNow}`}
+        по направлению ${esc(c.fields.join(', ').toLowerCase())}. Это решается только до регистрации
+        на ЕНТ — потом пара уже зафиксирована.
+        <div class="chips" style="margin-top:10px">
+          ${c.options.map((o) => `<button class="check" data-act="fixPair" data-v="${o.id}">
+            Взять «${esc(o.name)}» — откроет ${o.count} программ</button>`).join('')}
+        </div>
+        <div class="tiny" style="margin-top:8px">Или оставьте пару как есть — ниже собраны
+        варианты, доступные именно с ней.</div>
+      </div>`
+    : '';
+
+  const empty = !result.matches.length
+    ? `<div class="empty">
+        <div class="empty__t">Под эти условия ничего не подошло</div>
+        <div class="empty__d">Чаще всего мешает пара профильных предметов или запрет на переезд.
+        Измените один ответ выше — список пересчитается сразу.</div>
+      </div>`
+    : '';
+
+  return `<div class="stack-lg">
+    <div class="stack">
+      <div class="tiny">Этап 3 — рекомендации</div>
+      <h2 class="h1" style="font-size:clamp(22px,5.4vw,28px)">${result.directFits >= 3
+        ? `${result.matches.length} программ подходят вашему профилю`
+        : `Вот что доступно с вашими ответами`}</h2>
+      <p class="small">Проценты — это балл соответствия по шести критериям. Полоска под названием
+      показывает вклад каждого: длина сегмента равна его весу в модели, заливка — насколько
+      он выполнен. Нажмите «Почему подходит», чтобы увидеть все шесть с числами.</p>
+    </div>
+
+    <div>
+      <div class="tiny" style="margin-bottom:8px">Измените любой ответ — рекомендации пересчитаются</div>
+      <div class="chips">${quick}</div>
+    </div>
+
+    ${changes}
+    ${conflict}
+    ${empty}
+
+    <div class="stack">${result.matches.map((m, i) => matchCard(m, i, state)).join('')}</div>
+
+    ${result.adjacent.length ? `<div class="card card--flat stack">
+      <div class="h3">Смежные варианты</div>
+      <p class="small">Формально доступны, но либо направление рядом с вашим, либо другой город.</p>
+      ${result.adjacent.map((m) => `<div class="reason">
+        <span class="reason__key">${m.total}%</span>
+        <span class="reason__txt"><b>${esc(m.program.short)} — ${esc(m.program.name)}.</b>
+        ${esc(m.parts.find((x) => x.key === 'interest').explain)}
+        <button class="link" data-act="open" data-v="${m.program.id}">Подробнее</button></span>
+      </div>`).join('')}
+    </div>` : ''}
+
+    ${result.blocked.length ? `<div class="card card--flat stack">
+      <div class="h3">Закрыто формально</div>
+      <p class="small">Это не «не рекомендуем» — это правила приёма, которые нельзя обойти.</p>
+      ${result.blocked.map((m) => `<div class="reason">
+        <span class="reason__key" style="color:var(--risk)">${esc(m.blockers[0].title)}</span>
+        <span class="reason__txt"><b>${esc(m.program.short)} — ${esc(m.program.name)}.</b>
+        ${esc(m.blockers[0].fix)}</span>
+      </div>`).join('')}
+    </div>` : ''}
+
+    <div class="btn-row">
+      <button class="btn btn--ghost" data-act="goto" data-v="compare">Сравнить</button>
+      <button class="btn" data-act="goto" data-v="roadmap">Построить маршрут</button>
+    </div>
+
+    <p class="tiny">${esc(DATA_NOTE)}</p>
+  </div>`;
+}
+
+// ——— 5. Сравнение ———
+
+const bestOf = (vals, dir) => {
+  const nums = vals.filter((v) => typeof v === 'number');
+  if (!nums.length) return null;
+  return dir === 'max' ? Math.max(...nums) : Math.min(...nums);
+};
+
+function compareScreen(state, items) {
+  if (items.length < 2) {
+    return `<div class="stack-lg">
+      <div class="stack">
+        <div class="tiny">Этап 4 — сравнение</div>
+        <h2 class="h1" style="font-size:clamp(22px,5.4vw,28px)">Сравнение вариантов</h2>
+      </div>
+      <div class="empty">
+        <div class="empty__t">Нужно минимум два варианта</div>
+        <div class="empty__d">Отметьте «Сравнить» на карточках рекомендаций — можно выбрать до трёх.</div>
+        <div style="margin-top:14px"><button class="btn btn--slim" data-act="goto" data-v="matches">К рекомендациям</button></div>
+      </div>
+    </div>`;
+  }
+
+  const prio = state.profile.priorities || [];
+  const rows = [
+    { k: 'Соответствие', p: null, dir: 'max', v: (m) => m.total, f: (m) => `${m.total}%` },
+    { k: 'Шансы на грант', p: 'grant', dir: null, f: (m) => `${m.chance.label}${m.chance.gap !== null ? `<br><span class="tiny">разрыв ${m.chance.gap > 0 ? '+' : ''}${m.chance.gap}</span>` : ''}` },
+    { k: 'Проходной балл', p: 'grant', dir: 'min', v: (m) => m.program.cutoff, f: (m) => m.program.cutoff ? `${m.program.cutoff} ${demoChip()}` : 'свой конкурс' },
+    { k: 'Пороговый балл', p: null, f: (m) => String(m.threshold) },
+    { k: 'Стоимость', p: 'cost', dir: 'min', v: (m) => m.program.tuition, f: (m) => `${fmtMoney(m.program.tuition)} ${demoChip()}` },
+    { k: 'Грантов', p: 'grant', f: (m) => GRANT_SEATS_LABEL[m.program.grantSeats] },
+    { k: 'Город', p: 'city', f: (m) => cityName(m.program.city) },
+    { k: 'Языки', p: 'lang', f: (m) => m.program.langs.map(langName).join(', ') },
+    { k: 'Репутация', p: 'quality', dir: 'max', v: (m) => m.program.rep, f: (m) => `${'●'.repeat(m.program.rep)}${'○'.repeat(5 - m.program.rep)} ${demoChip()}` },
+    { k: 'Трудоустройство', p: 'career', dir: 'max', v: (m) => m.program.career, f: (m) => `${'●'.repeat(m.program.career)}${'○'.repeat(5 - m.program.career)} ${demoChip()}` },
+    { k: 'Профильные', p: null, f: (m) => m.program.pairs.length ? m.program.pairs.map(pairName).join('<br>') : 'не требуются' },
+  ];
+
+  const head = items.map((m) =>
+    `<th><div class="card__uni">${esc(m.program.short)}</div>
+     <div style="font-weight:700;font-size:12.5px;line-height:1.2">${esc(m.program.name)}</div>
+     <button class="link tiny" data-act="compare" data-v="${m.program.id}" style="margin-top:4px">убрать</button></th>`).join('');
+
+  const body = rows.map((r) => {
+    const best = r.dir && r.v ? bestOf(items.map(r.v), r.dir) : null;
+    const cells = items.map((m) => {
+      const win = best !== null && r.v && r.v(m) === best && items.length > 1;
+      return `<td class="${win ? 'win' : ''}">${r.f(m)}</td>`;
+    }).join('');
+    const hot = r.p && prio.includes(r.p);
+    return `<tr class="${hot ? 'is-priority' : ''}"><th>${r.k}${hot ? ' ★' : ''}</th>${cells}</tr>`;
+  }).join('');
+
+  return `<div class="stack-lg">
+    <div class="stack">
+      <div class="tiny">Этап 4 — сравнение</div>
+      <h2 class="h1" style="font-size:clamp(22px,5.4vw,28px)">Сравнение по вашим параметрам</h2>
+      <p class="small">Строки со звёздочкой — то, что вы назвали важным
+      (${prio.map(priorityName).join(', ') || 'не выбрано'}). Зелёным помечено лучшее значение в строке.</p>
+    </div>
+    <div class="scrollx">
+      <table class="cmp">
+        <thead><tr><th></th>${head}</tr></thead>
+        <tbody>${body}</tbody>
+      </table>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn--ghost" data-act="goto" data-v="matches">Назад к списку</button>
+      <button class="btn" data-act="goto" data-v="roadmap">Маршрут</button>
+    </div>
+    <p class="tiny">Оценки репутации и трудоустройства — редакционные ориентиры для демонстрации,
+    а не официальный рейтинг. ${esc(DATA_NOTE)}</p>
+  </div>`;
+}
+
+// ——— 6. Маршрут ———
+
+function roadmapScreen(state, steps, target) {
+  const prog = planProgress(steps, state.done);
+  const nextId = (steps.find((s) => !state.done[s.id]) || {}).id;
+
+  const list = steps.map((s) => {
+    const done = !!state.done[s.id];
+    const isNext = s.id === nextId;
+    return `<li class="step ${done ? 'is-done' : ''} ${isNext ? 'is-next' : ''}">
+      <div class="step__when">${esc(s.when)} · ${CATEGORIES[s.cat].name}</div>
+      <div class="step__title">${esc(s.title)}</div>
+      <div class="step__detail">${esc(s.detail)}</div>
+      <div class="step__meta">
+        <button class="check ${done ? 'is-on' : ''}" data-act="done" data-v="${s.id}">
+          <span class="check__box">✓</span>${done ? 'Сделано' : 'Отметить'}
+        </button>
+        ${s.source ? `<a class="chip chip--route" href="${esc(s.source.url)}" target="_blank" rel="noopener">${esc(s.source.label)} ↗</a>` : ''}
+        ${s.demo ? demoChip('Даты по циклу 2026 года, кампания 2027 официально не объявлена') : ''}
+      </div>
+    </li>`;
+  }).join('');
+
+  return `<div class="stack-lg">
+    <div class="stack">
+      <div class="tiny">Этап 5 — маршрут</div>
+      <h2 class="h1" style="font-size:clamp(22px,5.4vw,28px)">Ваш план до августа 2027</h2>
+      ${target
+        ? `<p class="note note--change"><b>Целевая программа:</b> ${esc(target.program.short)} — ${esc(target.program.name)}. План построен под её требования.</p>`
+        : `<p class="note note--warn">Целевая программа не выбрана, поэтому план общий.
+           <button class="link" data-act="goto" data-v="matches">Выберите программу</button>, и шаги станут точнее.</p>`}
+    </div>
+
+    <div class="card stack">
+      <div style="display:flex;align-items:baseline;gap:8px">
+        <div class="h3">Прогресс</div>
+        <div class="tiny" style="margin-left:auto">${prog.complete} из ${prog.total} шагов</div>
+      </div>
+      <div class="progress"><div class="progress__fill" style="width:${prog.pct}%"></div></div>
+    </div>
+
+    <ol class="route">${list}</ol>
+
+    <p class="note">${esc(CALENDAR_NOTE)}</p>
+    <div class="btn-row">
+      <button class="btn btn--ghost" data-act="goto" data-v="matches">К рекомендациям</button>
+      <button class="btn btn--ghost" data-act="reset">Начать заново</button>
+    </div>
+  </div>`;
+}
+
+// ——— 7. Следующее действие ———
+
+function dock(step, prog) {
+  if (!step) {
+    return `<div class="dock"><div class="dock__row">
+      <div><div class="dock__k">МАРШРУТ ПРОЙДЕН</div>
+      <div class="dock__t">Все ${prog.total} шагов отмечены</div></div>
+    </div></div>`;
+  }
+  return `<div class="dock"><div class="dock__row">
+    <div style="min-width:0">
+      <div class="dock__k">СЛЕДУЮЩИЙ ШАГ</div>
+      <div class="dock__t">${esc(step.title)}</div>
+      <div class="dock__when">${esc(step.when)} · ${prog.complete}/${prog.total} готово</div>
+    </div>
+    <button class="btn btn--slim" data-act="done" data-v="${step.id}" style="flex:none">Сделано</button>
+  </div></div>`;
+}
+
+// ——— лист «почему подходит» ———
+
+function sheet(m, state) {
+  const pr = m.program;
+  const rows = m.parts.map((p) => `<div class="reason">
+    <span class="reason__key">${esc(p.label)}<br><span style="color:var(--ink-3);font-weight:500">вес ${p.weight}%</span></span>
+    <span class="reason__txt"><b>${p.score} из 100.</b> ${esc(p.explain)}</span>
+  </div>`).join('');
+
+  const blocks = m.blockers.length
+    ? `<div class="note note--warn"><b>Формальное ограничение:</b><br>
+        ${m.blockers.map((b) => `${esc(b.title)} — ${esc(b.detail)}`).join('<br><br>')}</div>`
+    : '';
+
+  return `<div class="sheet" data-act="closeSheet">
+    <div class="sheet__body stack" data-stop="1">
+      <div class="sheet__grab"></div>
+      <div class="card__uni">${esc(pr.uni)} · ${cityName(pr.city)}${pr.gop ? ` · группа ${pr.gop}` : ''}</div>
+      <h2 class="h2">${esc(pr.name)}</h2>
+      <div class="chips">
+        <span class="chip chip--route">соответствие ${m.total}%</span>
+        <span class="chip ${CHANCE_CHIP[m.chance.level]}">${m.chance.label}</span>
+        <span class="chip">${fmtMoney(pr.tuition)} ${demoChip()}</span>
+      </div>
+      <p class="small">${esc(pr.note)}</p>
+      ${blocks}
+      <div class="card card--flat">
+        <div class="h3">Как сложился балл соответствия</div>
+        <div class="reasons" style="border-top:0;padding-top:10px;margin-top:0">${rows}</div>
+      </div>
+      <div class="facts">
+        <div class="fact"><span class="fact__k">Проходной</span><span class="fact__v">${pr.cutoff ?? 'свой конкурс'} ${pr.cutoff ? demoChip() : ''}</span></div>
+        <div class="fact"><span class="fact__k">Порог</span><span class="fact__v">${m.threshold}</span></div>
+        <div class="fact"><span class="fact__k">Языки</span><span class="fact__v">${pr.langs.map(langName).join(', ')}</span></div>
+        <div class="fact"><span class="fact__k">Профильные</span><span class="fact__v">${pr.pairs.length ? pr.pairs.map(pairName).join('; ') : 'не требуются'}</span></div>
+      </div>
+      <a class="btn btn--ghost" href="${esc(pr.site)}" target="_blank" rel="noopener">Официальный сайт вуза ↗</a>
+      <div class="btn-row">
+        <button class="btn btn--ghost" data-act="compare" data-v="${pr.id}">
+          ${state.compareIds.includes(pr.id) ? 'Убрать из сравнения' : 'В сравнение'}</button>
+        <button class="btn" data-act="target" data-v="${pr.id}">
+          ${state.targetId === pr.id ? 'Целевая' : 'Сделать целевой'}</button>
+      </div>
+      <p class="tiny">Источник фактов о вузе — его официальный сайт. Проходной балл и стоимость
+      помечены «демо»: это ориентиры прошлых кампаний, не гарантия и не официальные цифры.</p>
+    </div>
+  </div>`;
+}
+
+/* ===== src/app.js ===== */
+// Контроллер. Один цикл: состояние → пересчёт → полная перерисовка.
+// Такой подход выбран сознательно: при любом изменении профиля весь путь
+// (диагностика, рекомендации, сравнение, маршрут) пересчитывается из одного
+// источника, поэтому экраны не могут разойтись между собой.
+
+
+
+
+
+
+const store = createStore();
+const root = document.getElementById('app');
+
+const LIMITS = { interests: 3, priorities: 2, langs: 3 };
+const SHOW_DOCK = new Set(['matches', 'compare', 'roadmap']);
+
+function derive(state) {
+  const result = rankPrograms(state.profile);
+  const target =
+    (state.targetId && result.matches.find((m) => m.program.id === state.targetId))
+    || (state.targetId && programById(state.targetId)
+        ? scoreProgram(programById(state.targetId), state.profile)
+        : null)
+    || result.matches[0]
+    || null;
+  const steps = buildPlan(state.profile, target);
+  return {
+    result,
+    target,
+    steps,
+    diag: diagnose(state.profile),
+    next: nextStep(steps, state.done),
+    progress: planProgress(steps, state.done),
+  };
+}
+
+function screenHtml(state, d) {
+  switch (state.screen) {
+    case 'profile': return profileScreen(state);
+    case 'diagnosis': return diagnosisScreen(state, d.diag, d.result);
+    case 'matches': return matchesScreen(state, d.result);
+    case 'compare': {
+      const items = state.compareIds
+        .map((id) => d.result.matches.find((m) => m.program.id === id)
+          || (programById(id) ? scoreProgram(programById(id), state.profile) : null))
+        .filter(Boolean);
+      return compareScreen(state, items);
+    }
+    case 'roadmap': return roadmapScreen(state, d.steps, d.target);
+    default: return intro();
+  }
+}
+
+let lastScreen = null;
+
+function render() {
+  const state = store.state;
+  const d = derive(state);
+  const showDock = SHOW_DOCK.has(state.screen) && state.completed;
+
+  const warn = store.persisted
+    ? ''
+    : `<p class="note note--warn">Браузер не разрешает сохранение, поэтому маршрут
+       живёт только до перезагрузки страницы. Проверьте, не включён ли приватный режим.</p>`;
+
+  const sheetItem = state.sheet
+    ? (d.result.matches.find((m) => m.program.id === state.sheet)
+       || d.result.adjacent.find((m) => m.program.id === state.sheet)
+       || d.result.blocked.find((m) => m.program.id === state.sheet)
+       || (programById(state.sheet) ? scoreProgram(programById(state.sheet), state.profile) : null))
+    : null;
+
+  root.innerHTML = `
+    ${topbar(state)}
+    <div class="layout">
+      ${state.screen === 'intro' ? '' : rail(state)}
+      <div>
+        <main class="main ${showDock ? 'has-dock' : ''}">${warn}${screenHtml(state, d)}</main>
+        ${showDock ? `<div class="dock-wrap">${dock(d.next, d.progress)}</div>` : ''}
+      </div>
+    </div>
+    ${sheetItem ? sheet(sheetItem, state) : ''}`;
+
+  if (state.screen !== lastScreen) {
+    window.scrollTo({ top: 0, behavior: 'instant' });
+    lastScreen = state.screen;
+  }
+}
+
+// ——— события ———
+
+function act(name, value) {
+  const s = store.state;
+
+  if (name === 'start') return store.set({ screen: 'profile', profileStep: 0 });
+
+  if (name === 'next') {
+    if (s.profileStep < PROFILE_TOTAL - 1) {
+      return store.set({ profileStep: s.profileStep + 1 });
+    }
+    return store.set({ screen: 'diagnosis', completed: true });
+  }
+
+  if (name === 'back') {
+    if (s.sheet) return store.set({ sheet: null });
+    if (s.editing) return store.set({ editing: false, screen: 'matches' });
+    if (s.screen === 'profile' && s.profileStep > 0) {
+      return store.set({ profileStep: s.profileStep - 1 });
+    }
+    const order = ['intro', 'profile', 'diagnosis', 'matches', 'compare', 'roadmap'];
+    const i = Math.max(0, order.indexOf(s.screen) - 1);
+    return store.set({ screen: order[i] });
+  }
+
+  if (name === 'goto') {
+    const patch = { screen: value, sheet: null };
+    if (value !== 'matches') patch.changes = null;
+    if (value === 'matches' && !s.snapshot) {
+      patch.snapshot = snapshotOf(rankPrograms(s.profile));
+    }
+    return store.set(patch);
+  }
+
+  if (name === 'edit') {
+    return store.set({ screen: 'profile', profileStep: Number(value), editing: true, changes: null });
+  }
+
+  if (name === 'saveEdit') {
+    const result = rankPrograms(s.profile);
+    const changes = diffResult(s.snapshot, result);
+    return store.set({
+      screen: 'matches',
+      editing: false,
+      changes,
+      snapshot: snapshotOf(result),
+    });
+  }
+
+  if (name === 'cancelEdit') return store.set({ screen: 'matches', editing: false });
+
+  if (name.startsWith('set:')) {
+    const key = name.slice(4);
+    return store.setProfile({ [key]: key === 'entScore' ? Number(value) : value });
+  }
+
+  if (name.startsWith('toggle:')) {
+    const key = name.slice(7);
+    return store.toggleProfileList(key, value, LIMITS[key] || Infinity);
+  }
+
+  if (name === 'fixPair') {
+    store.setProfile({ pair: value });
+    const result = rankPrograms(store.state.profile);
+    return store.set({ changes: diffResult(s.snapshot, result), snapshot: snapshotOf(result) });
+  }
+
+  if (name === 'open') return store.set({ sheet: value });
+  if (name === 'closeSheet') return store.set({ sheet: null });
+
+  if (name === 'target') {
+    return store.set({ targetId: s.targetId === value ? null : value, sheet: null });
+  }
+
+  if (name === 'compare') {
+    const on = s.compareIds.includes(value);
+    const next = on
+      ? s.compareIds.filter((v) => v !== value)
+      : [...s.compareIds, value].slice(-3);
+    return store.set({ compareIds: next });
+  }
+
+  if (name === 'done') return store.toggleDone(value);
+
+  if (name === 'reset') {
+    if (window.confirm('Сбросить профиль и маршрут? Отметки о прогрессе тоже удалятся.')) {
+      lastScreen = null;
+      store.reset();
+    }
+    return undefined;
+  }
+
+  return undefined;
+}
+
+root.addEventListener('click', (e) => {
+  const stop = e.target.closest('[data-stop]');
+  const el = e.target.closest('[data-act]');
+  if (!el) return;
+  // клик внутри листа не должен его закрывать
+  if (el.dataset.act === 'closeSheet' && stop) return;
+  if (el.dataset.act === 'noop') return;
+  e.preventDefault();
+  act(el.dataset.act, el.dataset.v);
+});
+
+root.addEventListener('input', (e) => {
+  const el = e.target.closest('[data-act^="range:"]');
+  if (!el) return;
+  store.setProfile({ [el.dataset.act.slice(6)]: Number(el.value) });
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && store.state.sheet) store.set({ sheet: null });
+});
+
+store.subscribe(render);
+render();
+})();
+</script>
+</body>
+</html>
